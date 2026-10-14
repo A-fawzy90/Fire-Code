@@ -484,11 +484,51 @@ export default function App() {
             </span>
           </div>
 
-          <p style={{ color: '#64748b', fontSize: '0.74rem', maxWidth: '960px', margin: '0 auto', lineHeight: 1.5 }}>
-            {lang === 'ar' 
-              ? 'تنبيه قانوني ومهني: المنظومة مخصصة لتمكين الاستشاريين والمهندسين من فحص وتدقيق المعايير الهندسية والحسابية. القرارات والاعتمادات النهائية تظل اختصاصاً حصرياً للإدارة العامة للحماية المدنية بوزارة الداخلية واللجان الفنية المختصة.'
-              : 'Legal Notice: This system assists consultants and engineers in verifying code requirements. Final approval remains under the sole authority of the General Administration of Civil Protection and competent statutory committees.'}
-          </p>
+          {/* Prominent High-Visibility Legal & Professional Disclaimer Box */}
+          <div style={{
+            maxWidth: '1000px',
+            margin: '12px auto 0 auto',
+            background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(220, 38, 38, 0.18) 100%)',
+            border: '2px solid rgba(245, 158, 11, 0.7)',
+            borderRadius: '14px',
+            padding: '16px 24px',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4), 0 0 20px rgba(245, 158, 11, 0.25)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            textAlign: lang === 'ar' ? 'right' : 'left'
+          }}>
+            <div style={{
+              fontSize: '2rem',
+              lineHeight: 1,
+              flexShrink: 0,
+              filter: 'drop-shadow(0 2px 8px rgba(245, 158, 11, 0.6))'
+            }}>
+              ⚠️
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{
+                color: '#fef08a',
+                fontSize: '1.02rem',
+                fontWeight: 900,
+                letterSpacing: '0.2px',
+                marginBottom: '4px'
+              }}>
+                {lang === 'ar' ? 'تنبيه قانوني ومهني ملزم' : 'Mandatory Legal & Professional Notice'}
+              </div>
+              <p style={{
+                color: '#f1f5f9',
+                fontSize: '0.92rem',
+                fontWeight: 600,
+                lineHeight: 1.7,
+                margin: 0
+              }}>
+                {lang === 'ar' 
+                  ? 'المنظومة مخصصة لتمكين الاستشاريين والمهندسين من فحص وتدقيق المعايير الهندسية والحسابية استرشادياً وفق الكود المصري لحماية المنشآت من أخطار الحريق (قرار ٢٥٥ لسنة ٢٠٢٦). القرارات والموافقات والاعتمادات النهائية تظل اختصاصاً حصرياً ومطلقاً للإدارة العامة للحماية المدنية بوزارة الداخلية واللجان الفنية المختصة.'
+                  : 'This software is an engineering decision-support tool designed to assist consultants and engineers in verifying Egyptian Fire Code provisions (Decree No. 255/2026). Final approvals, certifications, and statutory permits remain under the exclusive and statutory authority of the General Administration of Civil Protection and authorized official committees.'}
+              </p>
+            </div>
+          </div>
         </div>
       </footer>
 

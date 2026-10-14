@@ -18,7 +18,8 @@ import {
   Trash2,
   RotateCcw,
   Plus,
-  X
+  X,
+  Calculator
 } from 'lucide-react';
 import { OFFICIAL_METADATA, SOURCE_DOCUMENTS } from '../data/codeKnowledgeBase';
 
@@ -318,7 +319,75 @@ export default function Dashboard({
               <Arrow size={14} />
             </div>
           </div>
+        </div>
 
+        {/* Interactive Calculators Hero Showcase */}
+        <div 
+          onClick={() => setCurrentTab('calculators')}
+          style={{
+            marginTop: '16px',
+            background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+            border: '1.5px solid rgba(245, 158, 11, 0.4)',
+            borderRadius: '14px',
+            padding: '16px 22px',
+            color: '#ffffff',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '16px',
+            boxShadow: '0 8px 20px rgba(0,0,0,0.25)',
+            transition: 'transform 0.2s ease, border-color 0.2s ease'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{
+              width: '46px',
+              height: '46px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+              color: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 0 15px rgba(239, 68, 68, 0.4)',
+              flexShrink: 0
+            }}>
+              <Calculator size={24} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>
+                  {isAr ? 'حاسبات الكود السريعة التفاعلية (Interactive Calculators)' : 'Interactive Fire Code Calculators'}
+                </h3>
+                <span style={{ fontSize: '0.7rem', background: '#ef4444', color: '#fff', padding: '2px 8px', borderRadius: '999px', fontWeight: 700 }}>
+                  {isAr ? 'إدخال لحظي ومخططات' : 'Real-time Diagrams'}
+                </span>
+              </div>
+              <p style={{ fontSize: '0.82rem', color: '#94a3b8', margin: '4px 0 0 0' }}>
+                {isAr 
+                  ? 'سعة خزان المياه ومجموعة الطلمبات الثلاثية (GPM/m³) • عروض السلالم ومسالك الهروب (معامل ٧٫٦ و ٥٫٠ مم) • مراوح ضغط السلالم وسحب الدخان (٥٠ باسكال و ١٫٠ م/ث).'
+                  : 'Water tank & triplex pumps • Stair & egress widths • Stairwell pressurization (50 Pa & 1.0 m/s).'}
+              </p>
+            </div>
+          </div>
+
+          <div style={{
+            background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+            color: '#ffffff',
+            padding: '10px 20px',
+            borderRadius: '10px',
+            fontSize: '0.84rem',
+            fontWeight: 800,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            flexShrink: 0,
+            boxShadow: '0 4px 12px rgba(239, 68, 68, 0.35)'
+          }}>
+            <span>{isAr ? 'فتح الحاسبات الهندسية' : 'Open Calculators'}</span>
+            <Arrow size={16} />
+          </div>
         </div>
       </section>
 

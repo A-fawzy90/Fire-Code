@@ -9,6 +9,7 @@ import ReportsView from './components/ReportsView';
 import AdminView from './components/AdminView';
 import FloatingAssistant from './components/FloatingAssistant';
 import SplashScreen from './components/SplashScreen';
+import EngineeringCalculators from './components/EngineeringCalculators';
 
 // Resilient Error Boundary to ensure tabs never freeze
 class TabErrorBoundary extends React.Component {
@@ -327,6 +328,14 @@ export default function App() {
               onSaveAssessment={handleSaveAssessment}
               initialQuery={initialAssessmentQuery}
               onDeleteProject={handleDeleteProject}
+            />
+          )}
+
+          {currentTab === 'calculators' && (
+            <EngineeringCalculators 
+              lang={lang}
+              selectedProject={selectedProject}
+              onOpenAssistant={handleOpenAssistantWithQuery}
             />
           )}
 

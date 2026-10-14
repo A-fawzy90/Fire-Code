@@ -192,6 +192,9 @@ export default function FloatingAssistant({ lang, selectedProject, isOpen, setIs
   };
 
   const suggestions = [
+    { ar: "حساب سعة خزان المياه وقدرة الطلمبات", en: "Calculate water tank and pumps" },
+    { ar: "حساب عروض السلالم ومسالك الهروب", en: "Calculate egress stair width" },
+    { ar: "حساب مراوح ضغط السلالم وسحب الدخان", en: "Calculate stair pressurization fan CFM" },
     { ar: "اشتراطات غرف المحول", en: "Transformer room requirements" },
     { ar: "اشتراطات غرف المولدات وخزانات الوقود", en: "Generator rooms & fuel tanks" },
     { ar: "أنظمة هود المطابخ التجارية والكيماويات الرطبة", en: "Commercial kitchen hood fire systems" },

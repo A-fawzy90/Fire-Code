@@ -193,8 +193,13 @@ const CONCEPT_MAPPINGS = [
   },
   {
     topicId: 'water_tanks',
-    keywords: ['خزان مياه', 'احتياطي مائي', 'زمن التدفق', 'سعه الخزان', 'water tank'],
-    targetProvisionIds: ['PROV-EG-006']
+    keywords: ['خزان مياه', 'احتياطي مائي', 'زمن التدفق', 'سعه الخزان', 'حساب سعه الخزان', 'حساب خزان المياه', 'قدره الطلمبات', 'طلمبات الحريق', 'water tank'],
+    targetProvisionIds: ['PROV-EG-006', 'PROV-EG-021']
+  },
+  {
+    topicId: 'stair_sizing',
+    keywords: ['عرض السلم', 'عروض السلالم', 'حمولة الاشغال', 'معامل ٧', 'معامل ٥', 'سعة السلالم', 'قطاع السلم', 'حساب السلم', 'egress sizing', 'stair width'],
+    targetProvisionIds: ['PROV-EG-004', 'PROV-EG-012']
   },
   {
     topicId: 'emergency_lighting',

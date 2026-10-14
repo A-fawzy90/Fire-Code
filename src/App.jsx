@@ -11,6 +11,7 @@ import FloatingAssistant from './components/FloatingAssistant';
 import SplashScreen from './components/SplashScreen';
 import EngineeringCalculators from './components/EngineeringCalculators';
 import FirebaseSyncModal from './components/FirebaseSyncModal';
+import RejectionsAndInterpretations from './components/RejectionsAndInterpretations';
 
 // Resilient Error Boundary to ensure tabs never freeze
 class TabErrorBoundary extends React.Component {
@@ -340,6 +341,15 @@ export default function App() {
               lang={lang}
               selectedProject={selectedProject}
               onOpenAssistant={handleOpenAssistantWithQuery}
+            />
+          )}
+
+          {currentTab === 'rejections' && (
+            <RejectionsAndInterpretations 
+              lang={lang}
+              selectedProject={selectedProject}
+              onOpenAssistant={handleOpenAssistantWithQuery}
+              onSwitchTab={setCurrentTab}
             />
           )}
 

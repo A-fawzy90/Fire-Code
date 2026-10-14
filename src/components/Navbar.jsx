@@ -31,6 +31,7 @@ export default function Navbar({
     { id: 'dashboard', labelAr: 'لوحة القيادة', labelEn: 'Dashboard', icon: Building2 },
     { id: 'assessment', labelAr: 'تقييم المشاريع', labelEn: 'Project Assessment', icon: FileCheck2 },
     { id: 'calculators', labelAr: 'الحاسبات التفاعلية', labelEn: 'Code Calculators', icon: Calculator },
+    { id: 'rejections', labelAr: 'أخطاء الحماية والتفسيرات', labelEn: 'Rejections & Interpretations', icon: AlertTriangle },
     { id: 'library', labelAr: 'تصفح الكود الكامل', labelEn: 'Full Code Browser', icon: BookOpen },
     { id: 'drawing', labelAr: 'فحص المخططات', labelEn: 'Drawing Review', icon: ClipboardList },
     { id: 'issues', labelAr: 'دراسة الحالات', labelEn: 'Issue Workspace', icon: ShieldAlert },

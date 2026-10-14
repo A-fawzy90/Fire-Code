@@ -391,6 +391,75 @@ export default function Dashboard({
             <Arrow size={16} />
           </div>
         </div>
+
+        {/* Civil Protection Rejections & Code Interpretations Hero Showcase */}
+        <div 
+          onClick={() => setCurrentTab('rejections')}
+          style={{
+            marginTop: '12px',
+            background: 'linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%)',
+            border: '1.5px solid rgba(239, 68, 68, 0.35)',
+            borderRadius: '14px',
+            padding: '16px 22px',
+            color: '#ffffff',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '16px',
+            boxShadow: '0 8px 20px rgba(0,0,0,0.25)',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{
+              width: '46px',
+              height: '46px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
+              color: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 0 15px rgba(220, 38, 38, 0.4)',
+              flexShrink: 0
+            }}>
+              <AlertTriangle size={24} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>
+                  {isAr ? 'أخطاء الحماية المدنية الشائعة وتفسيرات الكود (Rejection Hub)' : 'Civil Protection Rejections & Interpretations'}
+                </h3>
+                <span style={{ fontSize: '0.7rem', background: '#dc2626', color: '#fff', padding: '2px 8px', borderRadius: '999px', fontWeight: 700 }}>
+                  {isAr ? 'قسم ذهبي لاعتماد المخططات' : 'Golden Approval Hub'}
+                </span>
+              </div>
+              <p style={{ fontSize: '0.82rem', color: '#94a3b8', margin: '4px 0 0 0' }}>
+                {isAr 
+                  ? 'أسباب رفض الرسومات وطرق تفاديها (أبواب الهروب، استمرارية السلالم، غرف الكهرباء) • تفسيرات رسمية لفض النزاعات وحساب الارتفاع ٢٤م • أسئلة شائعة بالأرقام.'
+                  : 'Common rejection causes & remedies (exit doors, stair continuity, electrical rooms) • Authoritative rulings • Practical FAQs.'}
+              </p>
+            </div>
+          </div>
+
+          <div style={{
+            background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
+            color: '#ffffff',
+            padding: '10px 20px',
+            borderRadius: '10px',
+            fontSize: '0.84rem',
+            fontWeight: 800,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            flexShrink: 0,
+            boxShadow: '0 4px 12px rgba(220, 38, 38, 0.35)'
+          }}>
+            <span>{isAr ? 'استعراض أسباب الرفض' : 'Explore Rejections'}</span>
+            <Arrow size={16} />
+          </div>
+        </div>
       </section>
 
       {/* Two Column Section: Recent Projects & Official Documents Status */}

@@ -10,6 +10,7 @@ import AdminView from './components/AdminView';
 import FloatingAssistant from './components/FloatingAssistant';
 import SplashScreen from './components/SplashScreen';
 import EngineeringCalculators from './components/EngineeringCalculators';
+import FirebaseSyncModal from './components/FirebaseSyncModal';
 
 // Resilient Error Boundary to ensure tabs never freeze
 class TabErrorBoundary extends React.Component {
@@ -96,6 +97,7 @@ export default function App() {
       return true;
     }
   });
+  const [isFirebaseModalOpen, setIsFirebaseModalOpen] = useState(false);
 
   const handleOpenAssistantWithQuery = (queryText) => {
     setAssistantInitialQuery(queryText);
@@ -302,6 +304,7 @@ export default function App() {
         sampleProjects={projects}
         onSelectProject={handleSelectProject}
         onOpenSplash={() => setIsSplashOpen(true)}
+        onOpenFirebase={() => setIsFirebaseModalOpen(true)}
       />
 
       {/* Main Content View Switcher wrapped in TabErrorBoundary */}
@@ -318,6 +321,7 @@ export default function App() {
               onDeleteProject={handleDeleteProject}
               onRestoreDefaultProjects={handleRestoreDefaultProjects}
               onAddNewProject={handleAddNewProject}
+              onOpenFirebase={() => setIsFirebaseModalOpen(true)}
             />
           )}
 
@@ -505,6 +509,15 @@ export default function App() {
         isOpen={isSplashOpen} 
         onClose={() => setIsSplashOpen(false)} 
         lang={lang} 
+      />
+
+      {/* Firebase Cloud Database Sync & Management Modal */}
+      <FirebaseSyncModal 
+        isOpen={isFirebaseModalOpen}
+        onClose={() => setIsFirebaseModalOpen(false)}
+        lang={lang}
+        projects={projects}
+        onProjectsUpdated={(newProjects) => setProjects(newProjects)}
       />
     </div>
   );

@@ -19,7 +19,8 @@ import {
   RotateCcw,
   Plus,
   X,
-  Calculator
+  Calculator,
+  Cloud
 } from 'lucide-react';
 import { OFFICIAL_METADATA, SOURCE_DOCUMENTS } from '../data/codeKnowledgeBase';
 
@@ -32,7 +33,8 @@ export default function Dashboard({
   onQuickAssess,
   onDeleteProject,
   onRestoreDefaultProjects,
-  onAddNewProject
+  onAddNewProject,
+  onOpenFirebase
 }) {
   const isAr = lang === 'ar';
   const Arrow = isAr ? ArrowLeft : ArrowRight;
@@ -413,6 +415,27 @@ export default function Dashboard({
                 >
                   <RotateCcw size={13} />
                   <span>{isAr ? 'استعادة النماذج' : 'Restore Samples'}</span>
+                </button>
+              )}
+              {onOpenFirebase && (
+                <button 
+                  className="btn-secondary" 
+                  style={{ 
+                    fontSize: '0.78rem', 
+                    padding: '5px 11px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '5px',
+                    background: 'rgba(245, 158, 11, 0.08)',
+                    color: '#b45309',
+                    border: '1px solid rgba(245, 158, 11, 0.3)',
+                    fontWeight: 600
+                  }}
+                  onClick={onOpenFirebase}
+                  title={isAr ? 'مزامنة السحابة فايربيز (Firebase Firestore)' : 'Firebase Cloud Sync'}
+                >
+                  <Cloud size={13} color="#f59e0b" />
+                  <span>{isAr ? '☁️ سحابة Firebase' : '☁️ Firebase Sync'}</span>
                 </button>
               )}
               <button 

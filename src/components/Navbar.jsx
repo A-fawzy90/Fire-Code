@@ -22,7 +22,8 @@ export default function Navbar({
   selectedProject, 
   sampleProjects, 
   onSelectProject,
-  onOpenSplash
+  onOpenSplash,
+  onOpenFirebase
 }) {
   const isAr = lang === 'ar';
 
@@ -80,6 +81,29 @@ export default function Navbar({
           >
             <span>🔥</span>
             <span>{isAr ? 'مثلث الحريق | م. أحمد فوزي' : 'Fire Triangle | Eng. Ahmed Fawzy'}</span>
+          </button>
+
+          <button 
+            type="button"
+            onClick={onOpenFirebase}
+            style={{
+              background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(59, 130, 246, 0.2))',
+              border: '1px solid rgba(245, 158, 11, 0.4)',
+              color: '#93c5fd',
+              borderRadius: '999px',
+              padding: '3px 12px',
+              fontSize: '0.78rem',
+              fontWeight: 800,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+            title={isAr ? 'إدارة ومزامنة قاعدة بيانات Firebase (fire-code-9603d)' : 'Manage Firebase Database (fire-code-9603d)'}
+          >
+            <span>☁️</span>
+            <span>{isAr ? 'فايربيز | fire-code-9603d' : 'Firebase DB'}</span>
           </button>
 
           <button 

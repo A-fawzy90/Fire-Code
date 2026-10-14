@@ -2,10 +2,13 @@
 // Strictly grounded in Egyptian Fire Code 2026 (الكود المصري لحماية المنشآت من أخطار الحريق)
 // Ministerial Decree No. 255 of 2026 (قرار وزاري رقم ٢٥٥ لسنة ٢٠٢٦)
 
+export const toLatinDigits = (s) => (s ? String(s).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)) : '');
+
 /**
  * Natural-language parser that extracts project facts from Arabic or English text
  */
 export function parseProjectDescription(text) {
+  const normText = toLatinDigits(text || '');
   const facts = {
     rawText: text,
     occupancyType: null,
@@ -22,7 +25,7 @@ export function parseProjectDescription(text) {
     detectedEntities: []
   };
 
-  const lower = text.toLowerCase();
+  const lower = normText.toLowerCase();
 
   // 1. Occupancy Detection
   const hasCommercial = lower.includes('تجار') || lower.includes('commercial') || lower.includes('محلات') || lower.includes('معارض') || lower.includes('مول') || lower.includes('mall') || lower.includes('سوبر ماركت');
@@ -90,9 +93,9 @@ export function parseProjectDescription(text) {
   // 3. Above Ground Floors
   // Patterns like:
   // "أرضي و 5 علوي", "ارضى و 5 علوى", "أرضي و خمسة أدوار", "بدروم و أرضي و ٥ أدوار علوية", "5 علوي", "٦ أدوار"
-  const floorsUpperMatch = text.match(/(?:أرضي|ارضي|ارضى|ground)?\s*(?:و|\+)?\s*(?:بدروم\s*(?:و|\+)?)?\s*(?:أرضي|ارضي|ارضى|ground)?\s*(?:و|\+)?\s*(\d+|خمسة|ستة|سبعة|ثمانية|أربعة|اربعة|ثلاثة|اثنين|تسعة|عشرة)\s*(?:أدوار|ادوار|أداور|اداور|طوابق|طابق|دور)?\s*(?:علوية|علويه|علوي|علوى|متكررة|متكرره|متكرر)/i);
+  const floorsUpperMatch = normText.match(/(?:أرضي|ارضي|ارضى|ground)?\s*(?:و|\+)?\s*(?:بدروم\s*(?:و|\+)?)?\s*(?:أرضي|ارضي|ارضى|ground)?\s*(?:و|\+)?\s*(\d+|خمسة|ستة|سبعة|ثمانية|أربعة|اربعة|ثلاثة|اثنين|تسعة|عشرة)\s*(?:أدوار|ادوار|أداور|اداور|طوابق|طابق|دور)?\s*(?:علوية|علويه|علوي|علوى|متكررة|متكرره|متكرر)/i);
   
-  const floorsArabicMatch = floorsUpperMatch || text.match(/(?:أرضي|ارضي|ارضى)\s*(?:و|\+)?\s*(?:بدروم\s*(?:و|\+)?)?\s*(خمسة|ستة|سبعة|ثمانية|أربعة|ثلاثة|اثنين|تسعة|عشرة|\d+)\s*(?:أدوار|ادوار|أداور|اداور|طوابق|طابق|دور)?(?:\s*(?:علوية|علويه|علوي|علوى|متكررة))?/i);
+  const floorsArabicMatch = floorsUpperMatch || normText.match(/(?:أرضي|ارضي|ارضى)\s*(?:و|\+)?\s*(?:بدروم\s*(?:و|\+)?)?\s*(خمسة|ستة|سبعة|ثمانية|أربعة|ثلاثة|اثنين|تسعة|عشرة|\d+)\s*(?:أدوار|ادوار|أداور|اداور|طوابق|طابق|دور)?(?:\s*(?:علوية|علويه|علوي|علوى|متكررة))?/i);
   
   const wordMap = { 'اثنين': 2, 'ثلاثة': 3, 'أربعة': 4, 'اربعة': 4, 'خمسة': 5, 'ستة': 6, 'سبعة': 7, 'ثمانية': 8, 'تسعة': 9, 'عشرة': 10 };
 
@@ -104,7 +107,7 @@ export function parseProjectDescription(text) {
     facts.aboveGroundFloors = upperCount + 1; // ground + upper
     facts.detectedEntities.push({ label: `أدوار فوق الأرض: ${facts.aboveGroundFloors} (أرضي + ${upperCount} علوي)`, text: floorsArabicMatch[0] });
   } else {
-    const generalFloors = text.match(/(\d+)\s*(?:طوابق|أدوار|ادوار|اداور|أداور|أدوار متكررة|ادوار علوية|اداور علوية|دور|floors)/i);
+    const generalFloors = normText.match(/(\d+)\s*(?:طوابق|أدوار|ادوار|اداور|أداور|أدوار متكررة|ادوار علوية|اداور علوية|دور|floors)/i);
     if (generalFloors) {
       const num = parseInt(generalFloors[1], 10);
       const hasGroundWord = lower.includes('أرضي') || lower.includes('ارضي') || lower.includes('ارضى') || lower.includes('ground');
@@ -116,8 +119,8 @@ export function parseProjectDescription(text) {
   }
 
   // 4. Building Height
-  const heightMatch = text.match(/(?:ارتفاع|height)(?:\s*(?:المبنى|is)?\s*(?:هو|يبلغ)?)?\s*(\d+(?:[.,]\d+)?)\s*(?:م|مترا|متراً|متر|m|meters)/i) ||
-                      text.match(/(\d+(?:[.,]\d+)?)\s*(?:م|مترا|متراً|متر|m|meters)\s*(?:ارتفاع|height)/i);
+  const heightMatch = normText.match(/(?:ارتفاع|height)(?:\s*(?:المبنى|is)?\s*(?:هو|يبلغ)?)?\s*(\d+(?:[.,]\d+)?)\s*(?:م|مترا|متراً|متر|m|meters)/i) ||
+                      normText.match(/(\d+(?:[.,]\d+)?)\s*(?:م|مترا|متراً|متر|m|meters)\s*(?:ارتفاع|height)/i);
   if (heightMatch) {
     facts.buildingHeight = parseFloat(heightMatch[1].replace(',', '.'));
     const floorRate = facts.occupancyType === 'residential' ? 3.0 : 3.3;
@@ -152,8 +155,8 @@ export function parseProjectDescription(text) {
   }
 
   // 5. Floor Area & Total Area
-  const areaMatch = text.match(/(?:على\s*)?(?:مساحة\s*الدور|مساحة|مسطح|floor\s*area)(?:\s*(?:هي|تبلغ|قدرها|is)?)?\s*([\d,]+(?:\.\d+)?)\s*(?:م٢|م2|متر مربع|متر|م|m2|sqm)/i) ||
-                    text.match(/([\d,]+(?:\.\d+)?)\s*(?:م٢|م2|متر مربع|m2|sqm)(?:\s*(?:لكل\s*دور|للدور|floor))?/i);
+  const areaMatch = normText.match(/(?:على\s*)?(?:مساحة\s*الدور|مساحة|مسطح|floor\s*area)(?:\s*(?:هي|تبلغ|قدرها|is)?)?\s*([\d,]+(?:\.\d+)?)\s*(?:م٢|م2|متر مربع|متر|م|m2|sqm)/i) ||
+                    normText.match(/([\d,]+(?:\.\d+)?)\s*(?:م٢|م2|متر مربع|m2|sqm)(?:\s*(?:لكل\s*دور|للدور|floor))?/i);
   if (areaMatch) {
     const rawNum = areaMatch[1].replace(/,/g, '');
     facts.floorArea = parseFloat(rawNum);

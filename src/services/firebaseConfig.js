@@ -1,8 +1,9 @@
 // Firebase Cloud Integration Layer for Egyptian Fire Code Assistant
 // Project: fire-code-9603d
 // Grounded in Egyptian Fire Protection Code 305 & Decree 255/2026
+// Prepared by: Eng. Ahmed Fawzy
 
-import { initializeApp, getApps, getApp } from 'firebase/app';
+import { initializeApp, getApps, getApp, deleteApp } from 'firebase/app';
 import { 
   getFirestore, 
   collection, 
@@ -11,8 +12,14 @@ import {
   getDoc, 
   getDocs, 
   deleteDoc, 
-  serverTimestamp 
+  serverTimestamp,
+  writeBatch 
 } from 'firebase/firestore';
+import { 
+  getAuth, 
+  signInAnonymously, 
+  onAuthStateChanged 
+} from 'firebase/auth';
 
 export const DEFAULT_FIREBASE_PROJECT_ID = 'fire-code-9603d';
 
@@ -29,6 +36,24 @@ export const DEFAULT_FIREBASE_CONFIG = {
 const STORAGE_KEY = 'fire_code_firebase_config';
 
 /**
+ * Recursively remove undefined values from an object to prevent Firestore errors
+ */
+export function sanitizeFirestoreData(data) {
+  if (data === null || data === undefined) return null;
+  if (typeof data !== 'object') return data;
+  if (data instanceof Date) return data.toISOString();
+  if (Array.isArray(data)) return data.map(sanitizeFirestoreData).filter(v => v !== undefined);
+  
+  const cleaned = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (value !== undefined) {
+      cleaned[key] = sanitizeFirestoreData(value);
+    }
+  }
+  return cleaned;
+}
+
+/**
  * Get current stored Firebase configuration from localStorage or default
  */
 export function getFirebaseConfig() {
@@ -39,7 +64,7 @@ export function getFirebaseConfig() {
       return {
         ...DEFAULT_FIREBASE_CONFIG,
         ...parsed,
-        projectId: DEFAULT_FIREBASE_PROJECT_ID // Ensure project ID remains locked to fire-code-9603d
+        projectId: DEFAULT_FIREBASE_PROJECT_ID
       };
     }
   } catch (e) {
@@ -49,9 +74,9 @@ export function getFirebaseConfig() {
 }
 
 /**
- * Persist new Firebase configuration (e.g. user pasted Web API Key from console)
+ * Persist new Firebase configuration and re-initialize Firebase client immediately
  */
-export function saveFirebaseConfig(config) {
+export async function saveFirebaseConfig(config) {
   try {
     const updated = {
       ...DEFAULT_FIREBASE_CONFIG,
@@ -59,6 +84,19 @@ export function saveFirebaseConfig(config) {
       projectId: DEFAULT_FIREBASE_PROJECT_ID
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+
+    // Reset current Firebase app instance so new API Key takes effect immediately without page reload
+    if (firebaseApp) {
+      try {
+        await deleteApp(firebaseApp);
+      } catch (e) {
+        console.warn('Error deleting previous Firebase App instance:', e);
+      }
+      firebaseApp = null;
+      firestoreDb = null;
+      firebaseAuth = null;
+    }
+
     return updated;
   } catch (e) {
     console.error('Error saving Firebase config:', e);
@@ -67,37 +105,48 @@ export function saveFirebaseConfig(config) {
 }
 
 /**
- * Initialize Firebase App instance safely
+ * Initialize Firebase App, Auth, and Firestore instances safely
  */
 let firebaseApp = null;
 let firestoreDb = null;
+let firebaseAuth = null;
 
 export function getFirebaseServices() {
   const config = getFirebaseConfig();
 
-  // If no API key is provided, return inactive state
   if (!config.apiKey || config.apiKey.trim() === '') {
     return {
       isReady: false,
       reason: 'missing_api_key',
       config,
-      db: null
+      db: null,
+      auth: null
     };
   }
 
   try {
-    if (!getApps().length) {
-      firebaseApp = initializeApp(config);
-    } else {
-      firebaseApp = getApp();
+    if (!firebaseApp) {
+      if (!getApps().length) {
+        firebaseApp = initializeApp(config);
+      } else {
+        firebaseApp = getApp();
+      }
     }
-    firestoreDb = getFirestore(firebaseApp);
+    
+    if (!firestoreDb) {
+      firestoreDb = getFirestore(firebaseApp);
+    }
+
+    if (!firebaseAuth) {
+      firebaseAuth = getAuth(firebaseApp);
+    }
 
     return {
       isReady: true,
       reason: 'connected',
       config,
-      db: firestoreDb
+      db: firestoreDb,
+      auth: firebaseAuth
     };
   } catch (err) {
     console.error('Firebase initialization error:', err);
@@ -105,13 +154,34 @@ export function getFirebaseServices() {
       isReady: false,
       reason: err.message,
       config,
-      db: null
+      db: null,
+      auth: null
     };
   }
 }
 
 /**
- * Test live connection to Firebase Firestore
+ * Ensure user is authenticated (e.g. anonymously or via token) for secure Firestore rules
+ */
+export async function ensureFirebaseAuth() {
+  const { isReady, auth } = getFirebaseServices();
+  if (!isReady || !auth) return null;
+
+  if (auth.currentUser) {
+    return auth.currentUser;
+  }
+
+  try {
+    const cred = await signInAnonymously(auth);
+    return cred.user;
+  } catch (err) {
+    console.warn('Firebase anonymous authentication notice:', err);
+    return null;
+  }
+}
+
+/**
+ * Test live connection to Firebase Firestore with Auth & Ping
  */
 export async function testFirebaseConnection() {
   const { isReady, db, reason } = getFirebaseServices();
@@ -128,45 +198,53 @@ export async function testFirebaseConnection() {
   }
 
   try {
-    // Attempt writing a test handshake document to _connection_check collection
+    // Authenticate user anonymously to comply with secure Firestore rules
+    const user = await ensureFirebaseAuth();
+
+    // Write a test handshake document to _connection_check collection
     const testDocRef = doc(db, '_connection_check', 'ping');
     await setDoc(testDocRef, {
       pingTime: serverTimestamp(),
       clientTimestamp: new Date().toISOString(),
       clientApp: 'Egyptian Fire Code Assistant 2026',
       designer: 'Eng. Ahmed Fawzy',
-      projectId: DEFAULT_FIREBASE_PROJECT_ID
+      projectId: DEFAULT_FIREBASE_PROJECT_ID,
+      authUid: user ? user.uid : 'anonymous_client'
     });
 
     return {
       success: true,
-      messageAr: 'تم الاتصال بقاعدة بيانات Firebase بنجاح! السحابة متصلة وجاهزة للمزامنة اللحظية.',
-      messageEn: 'Connected to Firebase Firestore successfully! Cloud database is ready for sync.'
+      authUid: user?.uid,
+      messageAr: 'تم الاتصال بقاعدة بيانات Firebase وتأكيد هوية الجلسة بنجاح! السحابة متصلة وجاهزة للمزامنة اللحظية.',
+      messageEn: 'Connected to Firebase Firestore & session verified successfully! Ready for cloud sync.'
     };
   } catch (err) {
     console.error('Firebase test connection failed:', err);
     return {
       success: false,
-      messageAr: `حدث خطأ أثناء الاتصال بقاعدة البيانات: ${err.message}. تأكد من تفعيل قواعد الحماية (Firestore Security Rules) في وحدة التحكم.`,
+      messageAr: `حدث خطأ أثناء الاتصال بقاعدة البيانات: ${err.message}. تأكد من تفعيل قواعد الحماية في وحدة التحكم.`,
       messageEn: `Connection error: ${err.message}. Please check Firestore Security Rules in Firebase Console.`
     };
   }
 }
 
 /**
- * Save a single project to Firestore
+ * Save a single project to Firestore safely
  */
 export async function saveProjectToFirestore(project) {
   const { isReady, db } = getFirebaseServices();
-  if (!isReady || !db) return false;
+  if (!isReady || !db || !project?.id) return false;
 
   try {
-    const docRef = doc(db, 'projects', project.id);
-    await setDoc(docRef, {
+    const user = await ensureFirebaseAuth();
+    const docRef = doc(db, 'projects', String(project.id));
+    const cleanData = sanitizeFirestoreData({
       ...project,
+      ownerId: user ? user.uid : 'default_owner',
       updatedAt: serverTimestamp(),
       cloudSyncTime: new Date().toISOString()
-    }, { merge: true });
+    });
+    await setDoc(docRef, cleanData, { merge: true });
     return true;
   } catch (err) {
     console.error('Error saving project to Firestore:', err);
@@ -175,45 +253,56 @@ export async function saveProjectToFirestore(project) {
 }
 
 /**
- * Sync entire projects list to Firestore
+ * Sync entire projects list to Firestore using writeBatch for atomic high performance
  */
-export async function syncProjectsToFirestore(projects) {
+export async function syncProjectsToFirestore(projects = []) {
   const { isReady, db } = getFirebaseServices();
   if (!isReady || !db) return { success: false, syncedCount: 0 };
+  if (!projects.length) return { success: true, syncedCount: 0 };
 
   try {
+    const user = await ensureFirebaseAuth();
+    const batch = writeBatch(db);
     let count = 0;
+
     for (const project of projects) {
-      const docRef = doc(db, 'projects', project.id);
-      await setDoc(docRef, {
+      if (!project?.id) continue;
+      const docRef = doc(db, 'projects', String(project.id));
+      const cleanData = sanitizeFirestoreData({
         ...project,
+        ownerId: user ? user.uid : 'default_owner',
         updatedAt: serverTimestamp(),
         cloudSyncTime: new Date().toISOString()
-      }, { merge: true });
+      });
+      batch.set(docRef, cleanData, { merge: true });
       count++;
     }
+
+    await batch.commit();
     return { success: true, syncedCount: count };
   } catch (err) {
-    console.error('Error syncing projects to Firestore:', err);
+    console.error('Error batch syncing projects to Firestore:', err);
     throw err;
   }
 }
 
 /**
- * Fetch all projects from Firestore
+ * Fetch all projects from Firestore with schema sanitization
  */
 export async function fetchProjectsFromFirestore() {
   const { isReady, db } = getFirebaseServices();
   if (!isReady || !db) return null;
 
   try {
+    await ensureFirebaseAuth();
     const colRef = collection(db, 'projects');
     const snapshot = await getDocs(colRef);
     const projects = [];
     snapshot.forEach(docSnap => {
+      const data = docSnap.data();
       projects.push({
         id: docSnap.id,
-        ...docSnap.data()
+        ...data
       });
     });
     return projects;
@@ -228,10 +317,10 @@ export async function fetchProjectsFromFirestore() {
  */
 export async function deleteProjectFromFirestore(projectId) {
   const { isReady, db } = getFirebaseServices();
-  if (!isReady || !db) return false;
+  if (!isReady || !db || !projectId) return false;
 
   try {
-    const docRef = doc(db, 'projects', projectId);
+    const docRef = doc(db, 'projects', String(projectId));
     await deleteDoc(docRef);
     return true;
   } catch (err) {

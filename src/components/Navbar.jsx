@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { OFFICIAL_METADATA } from '../data/codeKnowledgeBase';
 import OfflineModeModal from './OfflineModeModal';
+import FireBrandLogo from './FireBrandLogo';
 
 export default function Navbar({ 
   currentTab, 
@@ -169,8 +170,8 @@ export default function Navbar({
         <div className="header-inner">
           {/* Brand */}
           <div className="brand-section" onClick={() => setCurrentTab('dashboard')}>
-            <div className="brand-logo-shield">
-              <ShieldAlert size={22} />
+            <div className="brand-logo-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <FireBrandLogo size={40} />
             </div>
             <div className="brand-text">
               <h1>{isAr ? 'مساعد كود الحريق المصري' : 'Egyptian Fire Code Assistant'}</h1>

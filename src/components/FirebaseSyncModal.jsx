@@ -13,7 +13,9 @@ import {
   Key, 
   Check, 
   HelpCircle,
-  Copy
+  Copy,
+  ShieldCheck,
+  Lock
 } from 'lucide-react';
 import { 
   getFirebaseConfig, 
@@ -31,10 +33,9 @@ export default function FirebaseSyncModal({
   projects = [], 
   onProjectsUpdated 
 }) {
-  if (!isOpen) return null;
-
   const isAr = lang === 'ar';
 
+  // State hooks declared unconditionally at the very top (100% React Hooks rules compliant)
   const [config, setConfig] = useState(getFirebaseConfig());
   const [apiKeyInput, setApiKeyInput] = useState(config.apiKey || '');
   const [appIdInput, setAppIdInput] = useState(config.appId || '');
@@ -46,18 +47,22 @@ export default function FirebaseSyncModal({
   const [testResult, setTestResult] = useState(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
+  const [copiedRules, setCopiedRules] = useState(false);
 
   useEffect(() => {
-    const current = getFirebaseConfig();
-    setConfig(current);
-    setApiKeyInput(current.apiKey || '');
-    setAppIdInput(current.appId || '');
-    setSenderIdInput(current.messagingSenderId || '');
+    if (isOpen) {
+      const current = getFirebaseConfig();
+      setConfig(current);
+      setApiKeyInput(current.apiKey || '');
+      setAppIdInput(current.appId || '');
+      setSenderIdInput(current.messagingSenderId || '');
+      setTestResult(null);
+    }
   }, [isOpen]);
 
-  const handleSaveConfig = () => {
+  const handleSaveConfig = async () => {
     try {
-      const updated = saveFirebaseConfig({
+      const updated = await saveFirebaseConfig({
         apiKey: apiKeyInput.trim(),
         appId: appIdInput.trim(),
         messagingSenderId: senderIdInput.trim()
@@ -71,13 +76,16 @@ export default function FirebaseSyncModal({
   };
 
   const handleTestConnection = async () => {
-    // Save first
-    handleSaveConfig();
     setTesting(true);
     setTestResult(null);
     try {
-      const res = await testFirebaseConnection();
-      setTestResult(res);
+      await saveFirebaseConfig({
+        apiKey: apiKeyInput.trim(),
+        appId: appIdInput.trim(),
+        messagingSenderId: senderIdInput.trim()
+      });
+      const result = await testFirebaseConnection();
+      setTestResult(result);
     } catch (err) {
       setTestResult({
         success: false,
@@ -90,13 +98,19 @@ export default function FirebaseSyncModal({
   };
 
   const handleSyncProjects = async () => {
+    if (!projects || projects.length === 0) {
+      alert(isAr ? 'لا توجد مشاريع محلية لرفعها إلى السحابة.' : 'No local projects to upload.');
+      return;
+    }
     setSyncing(true);
     try {
       const res = await syncProjectsToFirestore(projects);
       if (res.success) {
         alert(isAr 
-          ? `تم بنجاح رفع ومزامنة ${res.syncedCount} مشروع مع قاعدة بيانات Firestore سحابياً!` 
+          ? `تم رفع ومزامنة ${res.syncedCount} مشروع مع قاعدة بيانات Firestore بنجاح!` 
           : `Successfully synced ${res.syncedCount} projects to Firestore!`);
+      } else {
+        alert(isAr ? 'فشلت المزامنة. تأكد من إعداد المفاتيح واختبار الاتصال.' : 'Sync failed. Please check config.');
       }
     } catch (err) {
       alert(isAr ? `فشل المزامنة: ${err.message}` : `Sync failed: ${err.message}`);
@@ -110,12 +124,29 @@ export default function FirebaseSyncModal({
     try {
       const cloudProjects = await fetchProjectsFromFirestore();
       if (cloudProjects && cloudProjects.length > 0) {
+        const confirmMerge = window.confirm(isAr
+          ? `تم العثور على (${cloudProjects.length}) مشروع في السحابة.\n\nاضغط [موافق] لدمجها وحفظ مشاريعك الحالية معها بأمان.\nاضغط [إلغاء] للتراجع.`
+          : `Found (${cloudProjects.length}) projects in Firestore.\n\nClick [OK] to safely merge them with your existing local projects.\nClick [Cancel] to abort.`);
+        
+        if (!confirmMerge) return;
+
+        // Safe Merge Strategy: Combine existing projects with cloud projects by ID
+        const mergedMap = new Map();
+        (projects || []).forEach(p => mergedMap.set(String(p.id), p));
+        cloudProjects.forEach(cp => {
+          const key = String(cp.id);
+          const existing = mergedMap.get(key) || {};
+          mergedMap.set(key, { ...existing, ...cp });
+        });
+
+        const mergedList = Array.from(mergedMap.values());
         if (onProjectsUpdated) {
-          onProjectsUpdated(cloudProjects);
+          onProjectsUpdated(mergedList);
         }
+
         alert(isAr 
-          ? `تم استرجاع ${cloudProjects.length} مشروع من قاعدة بيانات Firebase بنجاح!` 
-          : `Successfully fetched ${cloudProjects.length} projects from Firebase!`);
+          ? `تم دمج وتحديث (${mergedList.length}) مشروع بنجاح!` 
+          : `Successfully merged and updated (${mergedList.length}) projects!`);
       } else {
         alert(isAr 
           ? 'قاعدة بيانات Firestore فارغة حالياً. يمكنك استخدام زر "مزامنة ورفع المشاريع" لتصدير مشاريعك الحالية إلى السحابة.' 
@@ -127,6 +158,34 @@ export default function FirebaseSyncModal({
       setFetching(false);
     }
   };
+
+  const copySecureRules = () => {
+    const rules = `rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /projects/{projectId} {
+      // Allow read/write only to authenticated users (including anonymous sessions)
+      allow read, write: if request.auth != null;
+    }
+    match /assessments/{assessmentId} {
+      allow read, write: if request.auth != null;
+    }
+    match /_connection_check/{docId} {
+      allow read, write: if true;
+    }
+  }
+}`;
+    try {
+      navigator.clipboard.writeText(rules);
+      setCopiedRules(true);
+      setTimeout(() => setCopiedRules(false), 3000);
+    } catch (e) {
+      console.warn('Clipboard write error:', e);
+    }
+  };
+
+  // Safe early exit AFTER all React Hooks have been unconditionally executed
+  if (!isOpen) return null;
 
   const isConnected = !!config.apiKey && config.apiKey.trim() !== '';
 
@@ -144,51 +203,51 @@ export default function FirebaseSyncModal({
       backgroundColor: 'rgba(5, 11, 24, 0.85)',
       backdropFilter: 'blur(10px)',
       WebkitBackdropFilter: 'blur(10px)',
-      padding: '16px',
+      padding: '20px',
       overflowY: 'auto'
     }}>
       <div style={{
         position: 'relative',
         width: '100%',
-        maxWidth: '740px',
-        background: '#0f172a',
-        border: '1.5px solid #d97706',
+        maxWidth: '680px',
+        background: 'linear-gradient(165deg, #0f172a 0%, #090d16 100%)',
+        border: '1px solid rgba(245, 158, 11, 0.3)',
         borderRadius: '20px',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 30px rgba(245, 158, 11, 0.2)',
+        boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 30px rgba(245, 158, 11, 0.15)',
         color: '#f8fafc',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column'
       }}>
-        {/* Header Bar */}
+        {/* Modal Header */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '16px 20px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-          background: 'rgba(255, 255, 255, 0.03)'
+          padding: '18px 24px',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          background: 'rgba(255, 255, 255, 0.02)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{
-              background: 'linear-gradient(135deg, #f59e0b 0%, #b45309 100%)',
               width: '36px',
               height: '36px',
               borderRadius: '10px',
+              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+              color: '#0f172a',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               boxShadow: '0 0 12px rgba(245, 158, 11, 0.4)'
             }}>
-              <Database size={20} color="#ffffff" />
+              <Database size={20} />
             </div>
             <div>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>
-                {isAr ? 'ربط قاعدة بيانات Firebase السحابية' : 'Firebase Cloud Database Hub'}
+              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#fef08a' }}>
+                {isAr ? 'قاعدة بيانات Firebase السحابية (Firestore)' : 'Firebase Cloud Firestore Sync'}
               </h3>
-              <div style={{ fontSize: '0.74rem', color: '#fed7aa', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span>{isAr ? 'المشروع المستهدف:' : 'Target Project:'}</span>
-                <strong style={{ color: '#60a5fa' }}>{DEFAULT_FIREBASE_PROJECT_ID}</strong>
+              <div style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
+                Project ID: <strong style={{ color: '#38bdf8' }}>{DEFAULT_FIREBASE_PROJECT_ID}</strong>
               </div>
             </div>
           </div>
@@ -290,7 +349,7 @@ export default function FirebaseSyncModal({
             </div>
           </div>
 
-          {/* Quick Setup Guide Toggle */}
+          {/* Quick Setup Guide Toggle with Secure Firestore Rules */}
           <div style={{
             background: 'rgba(15, 23, 42, 0.8)',
             border: '1px solid rgba(245, 158, 11, 0.25)',
@@ -303,21 +362,65 @@ export default function FirebaseSyncModal({
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fde68a', fontWeight: 700, fontSize: '0.84rem' }}>
                 <HelpCircle size={16} color="#f59e0b" />
-                <span>{isAr ? 'خطوات تفعيل قاعدة البيانات في ثوانٍ معدودة:' : 'Quick 3-step setup guide:'}</span>
+                <span>{isAr ? 'خطوات تفعيل قاعدة البيانات وقواعد الأمان المعتمدة:' : 'Setup guide & Secure Firestore Rules:'}</span>
               </div>
               <span style={{ fontSize: '0.74rem', color: '#94a3b8', textDecoration: 'underline' }}>
-                {showGuide ? (isAr ? 'إخفاء' : 'Hide') : (isAr ? 'عرض الخطوات' : 'Show steps')}
+                {showGuide ? (isAr ? 'إخفاء' : 'Hide') : (isAr ? 'عرض الخطوات والقواعد' : 'Show steps & rules')}
               </span>
             </div>
 
             {showGuide && (
-              <ol style={{ margin: '10px 0 0 0', paddingRight: isAr ? '20px' : 0, paddingLeft: !isAr ? '20px' : 0, fontSize: '0.78rem', color: '#cbd5e1', lineHeight: 1.6 }}>
-                <li>ادخل على <a href="https://console.firebase.google.com/project/fire-code-9603d/overview" target="_blank" rel="noreferrer" style={{ color: '#60a5fa' }}>رابط مشروعك (fire-code-9603d)</a> واضغط على أيقونة الترس ⚙️ واختر <strong>Project settings</strong>.</li>
-                <li>في الأسفل تحت قسم <strong>Your apps</strong> اضغط على أيقونة الويب <code>&lt;/&gt;</code> لإنشاء Web App (إن لم يكن منشأً بالفعل).</li>
-                <li>انسخ قيمة <code>apiKey</code> والصقها في الحقل بالأسفل.</li>
-                <li>من القائمة الجانبية ادخل على <strong>Firestore Database</strong> واضغط <strong>Create database</strong> (اختر Start in test mode).</li>
-                <li>اضغط على زر <strong>"حفظ واختبار الاتصال"</strong> بالأسفل، وسيتم تفعيل المزامنة السحابية فوراً!</li>
-              </ol>
+              <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <ol style={{ margin: 0, paddingRight: isAr ? '20px' : 0, paddingLeft: !isAr ? '20px' : 0, fontSize: '0.78rem', color: '#cbd5e1', lineHeight: 1.6 }}>
+                  <li>ادخل على <a href="https://console.firebase.google.com/project/fire-code-9603d/overview" target="_blank" rel="noreferrer" style={{ color: '#60a5fa' }}>مشروعك (fire-code-9603d)</a> ثم <strong>Project settings</strong> ➔ في الأسفل اضغط <code>&lt;/&gt;</code> وانسخ <code>apiKey</code>.</li>
+                  <li>من القائمة الجانبية ادخل على <strong>Authentication</strong> واضغط <strong>Get started</strong>، وفعل <strong>Anonymous</strong> أو الإيميل.</li>
+                  <li>في <strong>Firestore Database</strong> اضغط تبويب <strong>Rules</strong> وضع قواعد الأمان المعتمدة لحماية بيانات مشاريعك من القراءة أو التعديل غير المصرح به:</li>
+                </ol>
+
+                <div style={{
+                  background: '#090d16',
+                  border: '1px solid #334155',
+                  borderRadius: '8px',
+                  padding: '10px',
+                  position: 'relative',
+                  fontSize: '0.74rem',
+                  fontFamily: 'monospace',
+                  color: '#86efac'
+                }}>
+                  <button
+                    onClick={copySecureRules}
+                    style={{
+                      position: 'absolute',
+                      top: '6px',
+                      left: isAr ? '6px' : 'auto',
+                      right: !isAr ? '6px' : 'auto',
+                      background: copiedRules ? '#16a34a' : '#1e293b',
+                      color: '#fff',
+                      border: '1px solid #475569',
+                      padding: '3px 8px',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '0.7rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    {copiedRules ? <Check size={12} /> : <Copy size={12} />}
+                    <span>{copiedRules ? (isAr ? 'تم النسخ!' : 'Copied!') : (isAr ? 'نسخ القواعد' : 'Copy Rules')}</span>
+                  </button>
+                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+{`rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /projects/{projectId} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}`}
+                  </pre>
+                </div>
+              </div>
             )}
           </div>
 
@@ -338,7 +441,7 @@ export default function FirebaseSyncModal({
 
             <div>
               <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: '4px' }}>
-                Web API Key <span style={{ color: '#ef4444' }}>*</span> (مثال: AIzaSyC...)
+                Web API Key (من كونسول Firebase):
               </label>
               <input 
                 type="text"
@@ -518,11 +621,11 @@ export default function FirebaseSyncModal({
                 style={{
                   background: 'rgba(255, 255, 255, 0.08)',
                   color: '#f8fafc',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
                   padding: '12px 14px',
                   borderRadius: '10px',
                   fontSize: '0.82rem',
-                  fontWeight: 800,
+                  fontWeight: 700,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -531,19 +634,39 @@ export default function FirebaseSyncModal({
                 }}
               >
                 <DownloadCloud size={18} />
-                <span>{fetching ? (isAr ? 'جاري الاسترجاع...' : 'Fetching...') : (isAr ? 'استرجاع المشاريع من السحابة' : 'Restore from Cloud')}</span>
+                <span>{fetching ? (isAr ? 'جاري الجلب...' : 'Fetching...') : (isAr ? 'استرجاع ودمج من السحابة' : 'Fetch & Merge Cloud Projects')}</span>
               </button>
             </div>
-            
-            <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
-              {isAr 
-                ? 'ملاحظة: البيانات تحفظ محلياً على جهازك في LocalStorage وتتزامن سحابياً مع Firestore للنسخ الاحتياطي والعمل من أي جهاز.'
-                : 'Note: Projects are persisted in browser LocalStorage and synced to Firebase Firestore for cross-device backup.'}
-            </span>
           </div>
-
         </div>
 
+        {/* Modal Footer */}
+        <div style={{
+          padding: '14px 24px',
+          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+          background: 'rgba(0, 0, 0, 0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontSize: '0.76rem',
+          color: '#64748b'
+        }}>
+          <span>{isAr ? 'مزامنة آمنة • مشاريع كود الحريق المصري ٢٠٢٦' : 'Secure Cloud Sync • Egyptian Fire Code 2026'}</span>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#cbd5e1',
+              cursor: 'pointer',
+              fontWeight: 700,
+              textDecoration: 'underline'
+            }}
+          >
+            {isAr ? 'إغلاق النافذة' : 'Close'}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -44,11 +44,12 @@ export const AI_PROVIDERS = [
   }
 ];
 
+export const toLatinDigits = (s) => (s ? String(s).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)) : '');
+
 // Arabic normalization utility for robust semantic matching
 export function normalizeArabic(text) {
   if (!text) return '';
-  return text
-    .toString()
+  return toLatinDigits(text)
     .replace(/[\u064B-\u065F\u0670]/g, '') // remove tashkeel (fatha, damma, etc.)
     .replace(/[أإآٱ]/g, 'ا')
     .replace(/ة/g, 'ه')
@@ -56,7 +57,7 @@ export function normalizeArabic(text) {
     .replace(/ؤ/g, 'و')
     .replace(/ئ/g, 'ي')
     .replace(/ـ/g, '') // remove tatweel
-    .replace(/[^\w\s\u0621-\u064A]/g, ' ') // replace non-word chars with space
+    .replace(/[^\w\s\u0621-\u064A]/g, ' ') // replace non-word chars with space (digits preserved via \w)
     .toLowerCase()
     .replace(/\s+/g, ' ')
     .trim();

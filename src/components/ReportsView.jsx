@@ -11,6 +11,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { OFFICIAL_METADATA } from '../data/codeKnowledgeBase';
+import FireBrandLogo from './FireBrandLogo';
 
 export default function ReportsView({ lang, selectedProject }) {
   const isAr = lang === 'ar';
@@ -119,22 +120,22 @@ export default function ReportsView({ lang, selectedProject }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #0f172a', paddingBottom: '20px', marginBottom: '24px' }}>
           <div style={{ textAlign: isAr ? 'right' : 'left' }}>
             <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#0f172a' }}>
-              {isAr ? 'جمهورية مصر العربية' : 'Arab Republic of Egypt'}
+              {isAr ? 'مذكرة فنية استرشادية لمطابقة كود الحريق' : 'Technical Fire Code Verification Memorandum'}
             </div>
             <div style={{ fontSize: '0.86rem', color: '#334155' }}>
-              {isAr ? 'وزارة الإسكان والمرافق والمجتمعات العمرانية' : 'Ministry of Housing, Utilities & Urban Communities'}
+              {isAr ? 'وفق الكود المصري لحماية المنشآت من أخطار الحريق (قرار وزاري رقم ٢٥٥ لسنة ٢٠٢٦)' : 'Compliant with Egyptian Fire Code (Decree No. 255/2026)'}
             </div>
             <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
-              {isAr ? 'المركز القومي لبحوث الإسكان والبناء' : 'Housing & Building National Research Center (HBRC)'}
+              {isAr ? 'إعداد: المهندس / أحمد فوزي — مهندس أنظمة مكافحة وإنذار الحريق ومصمم البرنامج' : 'Prepared by: Eng. Ahmed Fawzy — Fire Protection & Alarm Systems Engineer'}
             </div>
           </div>
 
           <div style={{ textAlign: 'center' }}>
-            <div style={{ width: '48px', height: '48px', margin: '0 auto 4px auto', background: '#dc2626', color: 'white', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Flame size={28} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '4px' }}>
+              <FireBrandLogo size={46} />
             </div>
             <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#dc2626' }}>
-              كود الحريق ٢٠٢٦
+              كود الحريق ٣٠٥
             </span>
           </div>
 
@@ -210,31 +211,51 @@ export default function ReportsView({ lang, selectedProject }) {
           </h2>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {/* Dynamic Height Classification */}
             <div style={{ padding: '12px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                 <strong style={{ color: '#0f172a', fontSize: '0.9rem' }}>
-                  ١. اشتراطات المباني المرتفعة (High-Rise Requirements)
+                  {Number(project.facts.buildingHeight) > 22 
+                    ? (isAr ? '١. اشتراطات المباني المرتفعة (High-Rise Provisions)' : '1. High-Rise Building Provisions')
+                    : (isAr ? '١. اشتراطات المباني منخفضة ومتوسطة الارتفاع' : '1. Low / Mid-Rise Building Provisions')}
                 </strong>
                 <span style={{ fontSize: '0.78rem', color: '#dc2626', fontWeight: 700 }}>
-                  كود ٣٠٥/١ - الباب الخامس - ص ٥-٢
+                  {Number(project.facts.buildingHeight) > 22 
+                    ? (isAr ? 'كود ٣٠٥/١ - الباب الخامس - ص ٥-٢' : 'Code 305/1 - Ch. 5 - p. 5-2')
+                    : (isAr ? 'كود ٣٠٥/١ - الباب الرابع - ص ٤-٨' : 'Code 305/1 - Ch. 4 - p. 4-8')}
                 </span>
               </div>
               <p style={{ fontSize: '0.84rem', color: '#475569', lineHeight: 1.5 }}>
-                تجاوز ارتفاع المبنى (٢٢ متراً) يلزمه توفير شبكة رشاشات تلقائية شاملة لكافة الأدوار، ومصعد مخصص لرجال الإطفاء، وسلالم هروب مغلقة ومحمية بضغط هواء موجب.
+                {Number(project.facts.buildingHeight) > 22
+                  ? (isAr 
+                      ? `تجاوز ارتفاع المبنى (${project.facts.buildingHeight} متراً) لحد الارتفاع الكودي (٢٢م للإشغالات التجارية والإدارية / ٢٨م للسكني) يلزمه توفير شبكة رشاشات تلقائية شاملة لكافة الأدوار، ومصعد مخصص لرجال الإطفاء، وسلالم هروب مغلقة ومحمية بضغط هواء موجب (٢٥-٥٠ باسكال).`
+                      : `Building height (${project.facts.buildingHeight}m) exceeds the high-rise threshold (22m mercantile/business / 28m residential), mandating automatic sprinklers throughout, designated firefighter lift, and pressurized staircases.`)
+                  : (isAr
+                      ? `ارتفاع المبنى الحالي (${project.facts.buildingHeight} متراً) يقع دون حد المباني المرتفعة، مما يعفي المشروع من متطلبات مصاعد الحريق المخصصة وشبكات ضغط السلالم المعقدة، مع الاكتفاء بالتهوية الطبيعية للسلالم الخارجية أو صواعد الهروب المحمية ساعتين.`
+                      : `Building height (${project.facts.buildingHeight}m) is below the high-rise limit, exempting it from specialized firefighter lifts and complex stair pressurization, provided natural ventilation or protected enclosures are maintained.`)}
               </p>
             </div>
 
+            {/* Dynamic Basement Assessment */}
             <div style={{ padding: '12px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                 <strong style={{ color: '#0f172a', fontSize: '0.9rem' }}>
-                  ٢. عزل جراج البدروم وسحب الدخان الميكانيكي
+                  {Number(project.facts.basementFloors) > 0
+                    ? (isAr ? '٢. عزل جراج البدروم وسحب الدخان الميكانيكي' : '2. Basement Compartmentation & Smoke Exhaust')
+                    : (isAr ? '٢. وضعية أدوار البدروم (Basement Floors)' : '2. Basement Assessment')}
                 </strong>
                 <span style={{ fontSize: '0.78rem', color: '#dc2626', fontWeight: 700 }}>
-                  كود ٣٠٥/١ - الباب الخامس - ص ٥-١٠
+                  {isAr ? 'كود ٣٠٥/١ - الباب الخامس - ص ٥-١٠' : 'Code 305/1 - Ch. 5 - p. 5-10'}
                 </span>
               </div>
               <p style={{ fontSize: '0.84rem', color: '#475569', lineHeight: 1.5 }}>
-                عزل أرضيات وحوائط البدروم بفواصل حريق لا تقل عن ساعتين، وتركيب نظام ميكانيكي مستقل لسحب الدخان بمعدل ١٠ مرات تغيير هواء/ساعة مع فصل سلالم هروب البدروم بمخرج مباشر للخارج.
+                {Number(project.facts.basementFloors) > 0
+                  ? (isAr
+                      ? `عزل أرضيات وحوائط البدروم بفواصل حريق لا تقل عن ساعتين، وتركيب نظام ميكانيكي مستقل لسحب الدخان بمعدل ${project.facts.basementUse === 'parking' ? '١٠' : '٦'} مرات تغيير هواء/ساعة مع فصل سلالم هروب البدروم بمخرج مباشر للخارج.`
+                      : `Basement requires 2-hour fire-rated separation, independent mechanical smoke exhaust at ${project.facts.basementUse === 'parking' ? '10' : '6'} ACH, and direct-to-exterior isolated stairs.`)
+                  : (isAr
+                      ? `المبنى مصمم بدون أدوار تحت الأرض (صفر بدروم)، مما يمنحه إعفاءً كودياً كاملاً من اشتراطات سحب دخان البدرومات الميكانيكية المعقدة وفواصل العزل تحت السطحية.`
+                      : `Building contains no underground levels (zero basements), granting full exemption from complex basement mechanical smoke exhaust systems.`)}
               </p>
             </div>
 

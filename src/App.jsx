@@ -264,9 +264,11 @@ export default function App() {
     setCurrentTab('assessment');
   };
 
-  // Handle selecting a project
-  const handleSelectProject = (projId) => {
-    setSelectedProjectId(projId);
+  // Handle selecting a project (accepts either project object or projectId string)
+  const handleSelectProject = (projOrId) => {
+    if (!projOrId) return;
+    const id = typeof projOrId === 'object' ? projOrId.id : projOrId;
+    setSelectedProjectId(id);
   };
 
   // Handle saving assessment results to active project

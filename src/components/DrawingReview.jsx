@@ -419,6 +419,45 @@ export default function DrawingReview({ lang, onApplyExtractedFacts }) {
         </div>
       </div>
 
+      {/* Simulation / Verification Notice */}
+      <div style={{
+        background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95))',
+        border: '1px solid rgba(245, 158, 11, 0.35)',
+        borderRadius: '12px',
+        padding: '12px 18px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '12px',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '1.2rem' }}>📐</span>
+          <div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#fef08a' }}>
+              {isAr ? 'محاكاة وفحص استرشادي تفاعلي لمخططات الحريق (Interactive CAD Compliance Simulation)' : 'Interactive CAD Compliance Simulation'}
+            </div>
+            <div style={{ fontSize: '0.76rem', color: '#cbd5e1' }}>
+              {isAr 
+                ? 'يوفر هذا القسم فحصاً استرشادياً تفاعلياً لطبقات ومتجهات الأوتوكاد ومسارات الارتحال والسلالم وفق الكود المصري ٢٠٢٦. يلزم الاعتماد النهائي بتوقيع المهندس النقابي المختص.'
+                : 'Provides interactive simulation of CAD vectors, travel paths, and egress sizing under Egyptian Code 2026. Official sign-off requires a licensed professional engineer.'}
+            </div>
+          </div>
+        </div>
+        <span style={{
+          background: 'rgba(245, 158, 11, 0.15)',
+          color: '#f59e0b',
+          border: '1px solid rgba(245, 158, 11, 0.3)',
+          padding: '4px 10px',
+          borderRadius: '999px',
+          fontSize: '0.72rem',
+          fontWeight: 700
+        }}>
+          {isAr ? 'بيئة فحص استرشادية معتمدة' : 'Verified Simulation Mode'}
+        </span>
+      </div>
+
       {/* Analysis In-Progress Banner */}
       {isAnalyzing && (
         <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '14px 20px', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', gap: '12px', color: '#1e40af' }}>

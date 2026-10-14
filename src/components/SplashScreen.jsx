@@ -209,8 +209,7 @@ export default function SplashScreen({
                   fill="#7f1d1d" 
                   stroke="#ef4444" 
                   strokeWidth="2.5" 
-                  style={{ cursor: 'pointer', transition: 'all 0.3s ease' }}
-                  onClick={() => setActiveSide('reaction')}
+                  style={{ transition: 'all 0.3s ease' }}
                 />
                 <text 
                   x="150" 
@@ -224,7 +223,7 @@ export default function SplashScreen({
                   🔥
                 </text>
 
-                {/* Right Side: Heat Edge */}
+                {/* Right Side: Heat Edge (Heat to Fuel) */}
                 <line 
                   x1="150" y1="30" x2="270" y2="240" 
                   stroke="url(#heatGrad)" 
@@ -232,20 +231,21 @@ export default function SplashScreen({
                   strokeLinecap="round"
                 />
 
-                {/* Bottom Side: Fuel Edge */}
-                <line 
-                  x1="270" y1="240" x2="30" y2="240" 
-                  stroke="url(#fuelGrad)" 
-                  strokeWidth="6"
-                  strokeLinecap="round"
-                />
-
-                {/* Left Side: Oxygen Edge */}
+                {/* Left Side: Oxygen Edge (Heat to Oxygen) */}
                 <line 
                   x1="30" y1="240" x2="150" y2="30" 
                   stroke="url(#oxygenGrad)" 
                   strokeWidth="6"
                   strokeLinecap="round"
+                />
+
+                {/* Triangle Base: Bright Yellow Edge between Fuel and Oxygen */}
+                <line 
+                  x1="30" y1="240" x2="270" y2="240" 
+                  stroke="#facc15" 
+                  strokeWidth="6"
+                  strokeLinecap="round"
+                  style={{ filter: 'drop-shadow(0 0 10px rgba(250, 204, 21, 0.85))' }}
                 />
 
                 {/* Vertex 1: Top (Heat / الحرارة) */}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ShieldAlert, 
   Flame, 
@@ -10,9 +10,12 @@ import {
   Settings, 
   Languages, 
   AlertTriangle,
-  Calculator
+  Calculator,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import { OFFICIAL_METADATA } from '../data/codeKnowledgeBase';
+import OfflineModeModal from './OfflineModeModal';
 
 export default function Navbar({ 
   currentTab, 
@@ -26,6 +29,21 @@ export default function Navbar({
   onOpenFirebase
 }) {
   const isAr = lang === 'ar';
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [isOfflineModalOpen, setIsOfflineModalOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const navItems = [
     { id: 'dashboard', labelAr: 'لوحة القيادة', labelEn: 'Dashboard', icon: Building2 },
@@ -108,6 +126,34 @@ export default function Navbar({
           </button>
 
           <button 
+            type="button"
+            onClick={() => setIsOfflineModalOpen(true)}
+            style={{
+              background: isOnline ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.25)',
+              border: isOnline ? '1px solid rgba(74, 222, 128, 0.4)' : '1px solid #ef4444',
+              color: isOnline ? '#86efac' : '#fca5a5',
+              borderRadius: '999px',
+              padding: '3px 12px',
+              fontSize: '0.78rem',
+              fontWeight: 800,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: !isOnline ? '0 0 10px rgba(239, 68, 68, 0.5)' : 'none'
+            }}
+            title={isAr ? 'وضع العمل الميداني بدون إنترنت (متاح 100% في المواقع والبدرومات)' : 'Offline Field Mode'}
+          >
+            {isOnline ? <Wifi size={13} color="#4ade80" /> : <WifiOff size={13} color="#ef4444" />}
+            <span>
+              {isOnline 
+                ? (isAr ? '⚡ بالموقع (أوفلاين جاهز)' : '⚡ Field Mode Ready')
+                : (isAr ? '⚡ أوفلاين بالموقع (نشط)' : '⚡ Offline Active')}
+            </span>
+          </button>
+
+          <button 
             className="lang-toggle-btn"
             onClick={() => setLang(isAr ? 'en' : 'ar')}
             title="تبديل اللغة / Switch Language"
@@ -164,6 +210,14 @@ export default function Navbar({
           <span>{isAr ? OFFICIAL_METADATA.disclaimerAr : OFFICIAL_METADATA.disclaimerEn}</span>
         </div>
       </div>
+
+      {/* Offline Field Mode Modal */}
+      <OfflineModeModal 
+        isOpen={isOfflineModalOpen}
+        onClose={() => setIsOfflineModalOpen(false)}
+        lang={lang}
+        isOnline={isOnline}
+      />
     </>
   );
 }

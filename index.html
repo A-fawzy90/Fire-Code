@@ -8,6 +8,13 @@
     <meta name="keywords" content="الكود المصري للحريق, كود الحريق 2026, الحماية المدنية, المركز القومي لبحوث الإسكان والبناء, HBRC, Decree 255/2026, مسافات الارتحال, مخارج الطوارئ, رشاشات الحريق" />
     <title>مساعد كود الحريق المصري ٢٠٢٦ | Egyptian Fire Code Assistant</title>
     
+    <!-- PWA & Offline Support -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#dc2626" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+
     <!-- Preconnect to Google Fonts for Arabic Cairo & English Outfit -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,5 +23,15 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      // Register PWA Service Worker for Offline Field Operations
+      if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((reg) => console.log('Fire Code Assistant SW registered for Offline Operations:', reg.scope))
+            .catch((err) => console.warn('SW registration skipped:', err));
+        });
+      }
+    </script>
   </body>
 </html>

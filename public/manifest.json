@@ -1,0 +1,20 @@
+{
+  "short_name": "Fire Code 305",
+  "name": "مساعد كود الحريق المصري ٢٠٢٦ | Egyptian Fire Code Assistant",
+  "description": "المرجع الرقمي الشامل للكود المصري لحماية المنشآت من أخطار الحريق مع الحاسبات الهندسية - يعمل بالكامل بدون إنترنت",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#090d16",
+  "theme_color": "#dc2626",
+  "display": "standalone",
+  "orientation": "any",
+  "dir": "rtl",
+  "lang": "ar"
+}

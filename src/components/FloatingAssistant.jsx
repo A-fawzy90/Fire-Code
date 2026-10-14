@@ -19,7 +19,8 @@ import {
   CheckCircle2,
   FileText,
   Search,
-  Cpu
+  Cpu,
+  Globe
 } from 'lucide-react';
 import { askCodeAssistant } from '../services/aiProvider';
 import { OFFICIAL_METADATA } from '../data/codeKnowledgeBase';
@@ -27,6 +28,9 @@ import { OFFICIAL_METADATA } from '../data/codeKnowledgeBase';
 export default function FloatingAssistant({ lang, selectedProject, isOpen, setIsOpen, initialQuery }) {
   const isAr = lang === 'ar';
   
+  // Search Mode: 'general' (Default, broad Egyptian Code search) | 'project' (Optionally bind to active project)
+  const [searchMode, setSearchMode] = useState('general');
+
   const [messages, setMessages] = useState([
     {
       id: 'welcome-1',
@@ -45,14 +49,13 @@ export default function FloatingAssistant({ lang, selectedProject, isOpen, setIs
           page: "1"
         },
         plainExplanation: isAr
-          ? "يمكنك سؤالي عن: اشتراطات غرف المحول، غرف المولدات، هود المطابخ التجارية، خوانق الحريق (Dampers)، مسافات الارتحال، سعة مخارج الطوارئ، متطلبات رشاشات الحريق، أو اشتراطات البدروم."
-          : "You can ask about transformer rooms, generators, kitchen hoods, fire dampers, exit travel distances, egress capacities, or sprinkler mandates.",
-        aiAssessment: selectedProject 
-          ? (isAr 
-              ? `المشروع النشط حالياً: ${selectedProject.titleAr} (إشغال: ${selectedProject.facts?.subgroupNameAr || 'تجاري'}، الارتفاع: ${selectedProject.facts?.buildingHeight || 24}م)`
-              : `Active Project: ${selectedProject.titleEn} (Height: ${selectedProject.facts?.buildingHeight || 24}m)`)
-          : (isAr ? "لم يتم تحديد مشروع نشط بعد. سيتم الرد بناءً على أحكام الكود العامة." : "No project selected. Queries will be assessed against general code requirements."),
-        userFactsUsed: selectedProject ? (isAr ? selectedProject.titleAr : selectedProject.titleEn) : (isAr ? "استعلام عام" : "General Query"),
+          ? "يمكنك سؤالي بشكل عام عن: اشتراطات غرف المحول، غرف المولدات، هود المطابخ التجارية، خوانق الحريق (Dampers)، مسافات الارتحال، سعة مخارج الطوارئ، متطلبات رشاشات الحريق، أو اشتراطات البدروم لكافة أنواع المباني."
+          : "You can ask about transformer rooms, generators, kitchen hoods, fire dampers, exit travel distances, egress capacities, or sprinkler mandates across all building occupancies.",
+        isProjectSpecific: false,
+        aiAssessment: isAr 
+          ? "وضع الاستعلام: بحث عام شامل في نصوص الكود المصري (شامل لكافة الإشغالات والأنظمة) دون التقيد بمشروع بعينه. يمكنك التبديل لتطبيق الشروط على مشروع محدد متى أردت."
+          : "Mode: General Code Search across all building types and engineering disciplines.",
+        userFactsUsed: isAr ? "بحث عام في الكود المصري العام" : "General Code Query",
         humanReviewNoticeAr: "تنبيه مهني: هذا المساعد يقدم دعماً هندسياً استرشادياً موثقاً ولا يُعتبر ترخيصاً أو موافقة رسمية من الحماية المدنية.",
         humanReviewNoticeEn: "Notice: Guidance only; does not substitute official Civil Protection review."
       }
@@ -121,7 +124,12 @@ export default function FloatingAssistant({ lang, selectedProject, isOpen, setIs
     setLoading(true);
 
     try {
-      const responseData = await askCodeAssistant(query, selectedProject);
+      const responseData = await askCodeAssistant(
+        query, 
+        searchMode === 'project' ? selectedProject : null, 
+        'local-rag', 
+        { mode: searchMode }
+      );
       const assistantMsg = {
         id: `asst-${Date.now()}`,
         sender: 'assistant',
@@ -284,27 +292,108 @@ export default function FloatingAssistant({ lang, selectedProject, isOpen, setIs
             </div>
           </div>
 
-          {/* Active Project Banner inside Drawer */}
-          {selectedProject && (
-            <div style={{
-              background: '#eff6ff',
-              borderBottom: '1px solid #bfdbfe',
-              padding: '8px 14px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              fontSize: '0.78rem'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#1e40af' }}>
-                <Building2 size={14} />
-                <span>{isAr ? 'المشروع المقترن:' : 'Linked Project:'}</span>
-                <strong>{isAr ? selectedProject.titleAr : selectedProject.titleEn}</strong>
+          {/* Search Scope Switcher (General Search vs Project Bound) */}
+          <div style={{
+            background: searchMode === 'general' ? '#f0fdf4' : '#eff6ff',
+            borderBottom: searchMode === 'general' ? '1px solid #bbf7d0' : '1px solid #bfdbfe',
+            padding: '10px 14px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {/* General Mode Button (Default) */}
+                <button
+                  type="button"
+                  onClick={() => setSearchMode('general')}
+                  style={{
+                    background: searchMode === 'general' ? '#15803d' : '#ffffff',
+                    color: searchMode === 'general' ? '#ffffff' : '#334155',
+                    border: searchMode === 'general' ? '1px solid #166534' : '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    padding: '5px 12px',
+                    fontSize: '0.76rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: searchMode === 'general' ? '0 2px 6px rgba(21, 128, 61, 0.25)' : 'none',
+                    transition: 'all 0.15s ease'
+                  }}
+                  title={isAr ? "بحث عام شامل في الكود المصري لكافة المباني" : "General Code Search"}
+                >
+                  <Globe size={13} />
+                  <span>{isAr ? '🌐 استعلام عام في الكود (مفعّل)' : '🌐 General Code Search'}</span>
+                </button>
+
+                {/* Project Mode Button (Optional) */}
+                {selectedProject && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchMode('project')}
+                    style={{
+                      background: searchMode === 'project' ? '#1d4ed8' : '#ffffff',
+                      color: searchMode === 'project' ? '#ffffff' : '#475569',
+                      border: searchMode === 'project' ? '1px solid #1e40af' : '1px solid #cbd5e1',
+                      borderRadius: '8px',
+                      padding: '5px 12px',
+                      fontSize: '0.76rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: searchMode === 'project' ? '0 2px 6px rgba(29, 78, 216, 0.25)' : 'none',
+                      transition: 'all 0.15s ease'
+                    }}
+                    title={isAr ? "تطبيق الشروط على بيانات المشروع الحالي" : "Link to current project"}
+                  >
+                    <Building2 size={13} />
+                    <span>{isAr ? `🏢 ربط بالمشروع الحالي` : '🏢 Link to Project'}</span>
+                  </button>
+                )}
               </div>
-              <span style={{ color: '#64748b', fontSize: '0.72rem' }}>
-                {isAr ? `ارتفاع: ${selectedProject.facts?.buildingHeight || 24}م` : `Height: ${selectedProject.facts?.buildingHeight || 24}m`}
-              </span>
+
+              {/* Status Note */}
+              <div style={{ fontSize: '0.72rem', color: searchMode === 'general' ? '#15803d' : '#1e40af', fontWeight: 600 }}>
+                {searchMode === 'general' 
+                  ? (isAr ? '✅ بحث مفتوح غير مقيد بمشروع' : '✅ Unrestricted broad search')
+                  : (isAr ? `مشروع: ${selectedProject?.titleAr?.slice(0, 18)}...` : 'Project mode')}
+              </div>
             </div>
-          )}
+
+            {/* Sub-bar explanation for users */}
+            {searchMode === 'general' ? (
+              <div style={{ fontSize: '0.73rem', color: '#166534', display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(255,255,255,0.7)', padding: '5px 8px', borderRadius: '6px' }}>
+                <span>ℹ️</span>
+                <span>{isAr ? 'يتم البحث في كامل أجزاء الكود المصري (٣٠٥/١ و ٣٠٥/٢ و ٣٠٥/٣) والقرار ٢٥٥ لكافة المنشآت والأنظمة دون حصر الإجابة بمشروع.' : 'Searching all code volumes broadly without scoping to a single project.'}</span>
+              </div>
+            ) : (
+              <div style={{ fontSize: '0.73rem', color: '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.7)', padding: '5px 8px', borderRadius: '6px', flexWrap: 'wrap', gap: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <span>🏢</span>
+                  <span>{isAr ? `المشروع المقترن: ${selectedProject?.titleAr} (ارتفاع: ${selectedProject?.facts?.buildingHeight || 24}م)` : `Linked: ${selectedProject?.titleEn}`}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSearchMode('general')}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#dc2626',
+                    cursor: 'pointer',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    textDecoration: 'underline'
+                  }}
+                >
+                  {isAr ? 'إلغاء الربط والعودة للبحث العام 🌐' : 'Unlink and return to general 🌐'}
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Message List */}
           <div style={{
@@ -533,13 +622,37 @@ export default function FloatingAssistant({ lang, selectedProject, isOpen, setIs
                             </div>
                           )}
 
-                          {/* 3. Pill: AI Assessment for Project */}
+                          {/* 3. Pill: Scope & Applicability (General vs Project) */}
                           {msg.data.aiAssessment && (
                             <div>
-                              <span className="response-pill pill-assessment">
-                                {isAr ? '⚖️ التقييم الاسترشادي للمشروع' : '⚖️ Advisory Assessment'}
+                              <span 
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  padding: '3px 10px',
+                                  borderRadius: '999px',
+                                  fontSize: '0.73rem',
+                                  fontWeight: 800,
+                                  background: msg.data.isProjectSpecific ? '#fef3c7' : '#e0f2fe',
+                                  color: msg.data.isProjectSpecific ? '#92400e' : '#0369a1',
+                                  border: msg.data.isProjectSpecific ? '1px solid #fde68a' : '1px solid #bae6fd'
+                                }}
+                              >
+                                {msg.data.isProjectSpecific 
+                                  ? (isAr ? `🏢 التقييم الاسترشادي لمشروع: ${msg.data.projectName || ''}` : `🏢 Project Assessment: ${msg.data.projectName || ''}`)
+                                  : (isAr ? '🌐 النطاق والتطبيق العام بالكود المصري' : '🌐 General Egyptian Code Scope')}
                               </span>
-                              <p style={{ fontSize: '0.84rem', color: '#92400e', lineHeight: 1.5, background: '#fffbeb', padding: '8px 10px', borderRadius: '6px', margin: '6px 0 0 0' }}>
+                              <p style={{ 
+                                fontSize: '0.84rem', 
+                                color: msg.data.isProjectSpecific ? '#92400e' : '#0c4a6e', 
+                                lineHeight: 1.55, 
+                                background: msg.data.isProjectSpecific ? '#fffbeb' : '#f0f9ff', 
+                                border: msg.data.isProjectSpecific ? '1px solid #fde68a' : '1px solid #e0f2fe',
+                                padding: '9px 12px', 
+                                borderRadius: '8px', 
+                                margin: '6px 0 0 0' 
+                              }}>
                                 {msg.data.aiAssessment}
                               </p>
                             </div>
@@ -723,7 +836,9 @@ export default function FloatingAssistant({ lang, selectedProject, isOpen, setIs
               type="text"
               value={inputVal}
               onChange={(e) => setInputVal(e.target.value)}
-              placeholder={isAr ? "اكتب سؤالك عن الكود المصري (مثال: اشتراطات غرف المحول)..." : "Ask about Egyptian Fire Code..."}
+              placeholder={searchMode === 'general' 
+                ? (isAr ? "اكتب سؤالك العام عن الكود المصري (مثال: اشتراطات غرف المحول، مسافات الارتحال)..." : "Ask any general Egyptian Fire Code question...") 
+                : (isAr ? `اكتب سؤالك بخصوص مشروع (${selectedProject?.titleAr?.slice(0, 18)}...)...` : "Ask about this project...")}
               disabled={loading}
               style={{
                 flex: 1,

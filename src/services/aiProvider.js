@@ -213,10 +213,13 @@ const CONCEPT_MAPPINGS = [
   }
 ];
 
-export async function askCodeAssistant(query, projectContext = null, providerId = 'local-rag') {
+export async function askCodeAssistant(query, projectContext = null, providerId = 'local-rag', options = {}) {
   // Respect user instruction: "مش عايزه يكون سريع فى الرد المهم يرد صح"
   // Simulate an authentic, thorough multi-stage verification delay (1600ms)
   await new Promise(resolve => setTimeout(resolve, 1600));
+
+  const isGeneralMode = options.mode === 'general' || !projectContext;
+  const activeProject = isGeneralMode ? null : projectContext;
 
   const qNorm = normalizeArabic(query);
   const qTokens = qNorm.split(' ').filter(t => t.length > 1 && !ARABIC_STOP_WORDS.has(t));
@@ -276,12 +279,17 @@ export async function askCodeAssistant(query, projectContext = null, providerId 
       citation: null,
       exactSourceText: "لم يتم العثور على بند مباشر يتطابق حرفياً مع السؤال المدخل في بنود الكود المستخرجة حالياً الصادرة بقرار وزير الإسكان رقم ٢٥٥ لسنة ٢٠٢٦.",
       plainExplanation: "حرصاً على الدقة ومنع أي ردود خاطئة (Zero Hallucination)، تم فحص الأجزاء الثلاثة للكود (٣٠٥/١ الإنشائي، ٣٠٥/٢ الميكانيكي، ٣٠٥/٣ الكهربائي والإنذار). يرجى تحديد الاستفسار باستخدام أحد المصطلحات الهندسية الشائعة مثل: 'اشتراطات غرف المحول'، 'مسافات الارتحال'، 'شبكات الرشاشات المائية'، 'عزل البدروم وسحب الدخان'، 'سلالم الهروب ومخارج الطوارئ'، أو 'طفايات الحريق اليدوية'.",
-      aiAssessment: "المساعد متصل حصراً بنصوص الكود المصري المعتمدة ولا يقوم بتأليف أو اختلاق نصوص غير واردة بالقرار ٢٥٥ لسنة ٢٠٢٦.",
-      userFactsUsed: projectContext ? (projectContext.titleAr || projectContext.titleEn) : "استعلام عام",
+      aiAssessment: isGeneralMode
+        ? "استعلام عام: المساعد متصل بنصوص الكود المصري العام (كود ٣٠٥ والقرار ٢٥٥ لسنة ٢٠٢٦) لكافة أنواع المنشآت."
+        : "المساعد متصل حصراً بنصوص الكود المصري المعتمدة ولا يقوم بتأليف أو اختلاق نصوص غير واردة بالقرار ٢٥٥ لسنة ٢٠٢٦.",
+      userFactsUsed: isGeneralMode
+        ? "استعلام عام شامل في نصوص الكود المصري (كافة الإشغالات والأنظمة)"
+        : (activeProject?.titleAr || "استعلام عام"),
+      isProjectSpecific: !isGeneralMode,
       humanReviewNoticeAr: "تنبيه مهني: يرجى مراجعة الاستشاري الهندسي المعتمد لتحديد اشتراطات الحماية المدنية بدقة.",
       humanReviewNoticeEn: "Notice: Please consult a licensed professional engineer for official compliance.",
       reasoningChain: [
-        "فحص استعلام المستخدم والكلمات المفتاحية في قاعدة البيانات المعتمدة.",
+        "فحص استعلام المستخدم والكلمات المفتاحية في نصوص الكود العام المعتمد.",
         "إجراء بحث متقاطع في كود ٣٠٥/١ و ٣٠٥/٢ و ٣٠٥/٣.",
         "تم استبعاد الرد التلقائي غير الدقيق لمنع اختلاق نصوص كودية غير مطابقة."
       ]
@@ -292,14 +300,14 @@ export async function askCodeAssistant(query, projectContext = null, providerId 
 
   // Reasoning Chain (transparent engineering deliberation)
   const reasoningChain = [
-    `المرحلة الأولى: تحليل الاستعلام الهندسي "${query}" واستخراج المحددات التشغيلية.`,
+    `المرحلة الأولى: تحليل الاستعلام الهندسي العام "${query}" واستخراج المحددات الكودية.`,
     `المرحلة الثانية: الربط مع المجلد المعتمد (${bestMatch.documentTitleAr}) والتحقق من سريان قرار ٢٥٥ لسنة ٢٠٢٦.`,
-    `المرحلة الثالثة: تدقيق المرجع الكودي (${bestMatch.chapterNameAr} | ${bestMatch.articleNum} | ص ${bestMatch.page}).`,
-    `المرحلة الرابعة: المواءمة المنطقية للمتطلبات المعمارية والميكانيكية والكهربائية لمنع التعارض الهندسي.`
+    `المرحلة الثالثة: تدقيق المرجع الكودي العام (${bestMatch.chapterNameAr} | ${bestMatch.articleNum} | ص ${bestMatch.page}).`,
+    `المرحلة الرابعة: المواءمة المنطقية للمتطلبات المعمارية والميكانيكية والكهربائية العامة لمنع التعارض الهندسي.`
   ];
 
-  if (projectContext) {
-    reasoningChain.push(`المرحلة الخامسة: إسقاط البنود على معطيات المشروع النشط (${projectContext.titleAr || 'المشروع الحالي'}) - ارتفاع ${projectContext.facts?.buildingHeight || 'غير محدد'}م وإشغال ${projectContext.facts?.subgroupNameAr || 'عام'}.`);
+  if (!isGeneralMode && activeProject) {
+    reasoningChain.push(`المرحلة الخامسة: إسقاط البنود على معطيات المشروع (${activeProject.titleAr || 'المشروع المحدد'}) - ارتفاع ${activeProject.facts?.buildingHeight || 'غير محدد'}م وإشغال ${activeProject.facts?.subgroupNameAr || 'عام'}.`);
   }
 
   return {
@@ -320,13 +328,15 @@ export async function askCodeAssistant(query, projectContext = null, providerId 
     plainExplanation: bestMatch.plainExplanationAr,
     technicalBreakdown: matchedConcept?.multidisciplinary || null,
     reasoningChain,
-    aiAssessment: projectContext
-      ? `بالتطبيق على مشروع (${projectContext.titleAr || 'المشروع الحالي'})، واستناداً إلى المعطيات المتوفرة (الارتفاع: ${projectContext.facts?.buildingHeight || 'غير محدد'}م، الإشغال: ${projectContext.facts?.subgroupNameAr || projectContext.facts?.occupancyType || 'غير محدد'})، فإن هذه الاشتراطات ملزمة هندسياً وقانونياً طبقاً لكود الحريق ٢٠٢٦ وتتطلب اعتمادها التنفيذي من الحماية المدنية.`
-      : `وفقاً للكود المصري الصادر بقرار ٢٥٥ لسنة ٢٠٢٦، فإن هذا البند يمثل قاعدة ملزمة للمباني الخاضعة لشروط النطاق والتطبيق.`,
-    userFactsUsed: projectContext
-      ? `الإشغال: ${projectContext.facts?.subgroupNameAr || projectContext.facts?.occupancyType || 'عام'} | المساحة: ${projectContext.facts?.floorArea || 'غير محددة'} م² | الارتفاع: ${projectContext.facts?.buildingHeight || 'غير محدد'} م`
-      : 'استعلام عام في نصوص الكود دون مشروع محدد.',
-    humanReviewNoticeAr: 'تنبيه مهني: هذا الرد هو مساعدة استرشادية لاستخراج نصوص الكود، ولا يُعتبر بأي حال اعتماداً رسمياً أو ترخيصاً صادراً عن إدارة الحماية المدنية. يلزم مراجعة المخططات التنفيذية بواسطة مهندس استشاري معتمد وعرضها على اللجنة الفنية المختصة.',
+    isProjectSpecific: !isGeneralMode,
+    projectName: activeProject?.titleAr || null,
+    aiAssessment: !isGeneralMode && activeProject
+      ? `بالتطبيق على مشروع (${activeProject.titleAr})، واستناداً إلى المعطيات المتوفرة (الارتفاع: ${activeProject.facts?.buildingHeight || 'غير محدد'}م، الإشغال: ${activeProject.facts?.subgroupNameAr || activeProject.facts?.occupancyType || 'غير محدد'})، فإن هذه الاشتراطات ملزمة هندسياً وقانونياً طبقاً لكود الحريق ٢٠٢٦ وتتطلب اعتمادها التنفيذي من الحماية المدنية.`
+      : `قاعدة كودية عامة: تسري هذه الاشتراطات الهندسية وفقاً للكود المصري لحماية المنشآت من أخطار الحريق (كود ٣٠٥) والقرار الوزاري رقم ٢٥٥ لسنة ٢٠٢٦ كمعيار إلزامي لجميع المنشآت الخاضعة لهذا النطاق، وتُعد ركيزة أساسية للمطابقة المعمارية والميكانيكية والكهربائية لدى لجان الحماية المدنية.`,
+    userFactsUsed: !isGeneralMode && activeProject
+      ? `مشروع محدد: ${activeProject.titleAr} | الإشغال: ${activeProject.facts?.subgroupNameAr || activeProject.facts?.occupancyType || 'عام'} | المساحة: ${activeProject.facts?.floorArea || 'غير محددة'} م² | الارتفاع: ${activeProject.facts?.buildingHeight || 'غير محدد'} م`
+      : 'بحث واستعلام عام في نصوص الكود المصري (شامل لكافة المباني والإشغالات دون التقيد بمشروع بعينه)',
+    humanReviewNoticeAr: 'تنبيه مهني: هذا الرد هو مساعدة استرشادية عامة لاستخراج نصوص الكود، ولا يُعتبر بأي حال اعتماداً رسمياً أو ترخيصاً صادراً عن إدارة الحماية المدنية. يلزم مراجعة المخططات التنفيذية بواسطة مهندس استشاري معتمد وعرضها على اللجنة الفنية المختصة.',
     humanReviewNoticeEn: 'Notice: This response provides engineering retrieval support and does not constitute official Civil Protection approval.'
   };
 }

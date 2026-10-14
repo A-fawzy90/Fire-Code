@@ -203,12 +203,14 @@ export default function Navbar({
         </div>
       </header>
 
-      {/* Disclaimer Notice Strip */}
-      <div className="disclaimer-strip">
-        <AlertTriangle size={18} />
-        <div>
-          <strong>{isAr ? 'تنبيه مهني هام: ' : 'Professional Legal Notice: '}</strong>
-          <span>{isAr ? OFFICIAL_METADATA.disclaimerAr : OFFICIAL_METADATA.disclaimerEn}</span>
+      {/* High-Visibility Enlarged Disclaimer Notice Strip */}
+      <div className="disclaimer-strip" role="alert">
+        <div className="disclaimer-strip-badge">
+          <AlertTriangle size={18} color="#ffffff" />
+          <span>{isAr ? 'تنبيه مهني وقانوني هام:' : 'Important Legal Notice:'}</span>
+        </div>
+        <div className="disclaimer-strip-text">
+          {isAr ? OFFICIAL_METADATA.disclaimerAr : OFFICIAL_METADATA.disclaimerEn}
         </div>
       </div>
 

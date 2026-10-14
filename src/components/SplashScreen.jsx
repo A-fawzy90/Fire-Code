@@ -1,15 +1,10 @@
 import React, { useState } from 'react';
 import { 
-  Flame, 
-  Wind, 
-  Zap, 
   ShieldCheck, 
-  Sparkles, 
   X, 
   Award, 
   ChevronRight, 
   CheckCircle2, 
-  Info,
   Layers,
   BookOpen
 } from 'lucide-react';
@@ -19,7 +14,6 @@ export default function SplashScreen({
   onClose, 
   lang = 'ar' 
 }) {
-  const [activeSide, setActiveSide] = useState('heat'); // 'heat' | 'fuel' | 'oxygen' | 'reaction'
   const [dontShowAgain, setDontShowAgain] = useState(false);
 
   if (!isOpen) return null;
@@ -36,47 +30,6 @@ export default function SplashScreen({
     }
     onClose();
   };
-
-  const triangleDetails = {
-    heat: {
-      titleAr: 'الحرارة (Heat / Thermal Energy)',
-      titleEn: 'Heat (Thermal Energy)',
-      color: '#ef4444',
-      bgGrad: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(249, 115, 22, 0.05))',
-      icon: Flame,
-      summaryAr: 'الطاقة الحرارية اللازمة لرفع درجة حرارة المادة القابلة للاشتعال إلى نقطة الوميض والاشتعال الذاتي.',
-      codePrincipleAr: 'مبدأ الإطفاء بالكود المصري 305: (التبريد - Cooling) عبر شبكات رشاشات المياه التلقائية وصناديق الحريق لخفض درجة الحرارة دون نقطة الاشتعال.'
-    },
-    fuel: {
-      titleAr: 'الوقود (Fuel / Combustible Material)',
-      titleEn: 'Fuel (Combustible Material)',
-      color: '#f59e0b',
-      bgGrad: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(234, 179, 8, 0.05))',
-      icon: Zap,
-      summaryAr: 'المادة القابلة للاشتعال سواء كانت في حالة صلبة (أخشاب/أقمشة)، أو سائلة (محروقات)، أو غازية (غاز طبيعي/LPG).',
-      codePrincipleAr: 'مبدأ الإطفاء بالكود المصري 305: (التجويع - Starvation) بعزل المواد القابلة للاحتراق وقطع مصادر الغازات أو إخلاء المواد سريعة الاشتعال.'
-    },
-    oxygen: {
-      titleAr: 'الأكسجين (Oxygen / Oxidizing Agent)',
-      titleEn: 'Oxygen (Oxidizing Agent)',
-      color: '#06b6d4',
-      bgGrad: 'linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(59, 130, 246, 0.05))',
-      icon: Wind,
-      summaryAr: 'العامل المؤكسد الضروري لاستمرار الاحتراق (يتطلب الحريق تركيز أكسجين في الهواء الجوي يتجاوز 16%).',
-      codePrincipleAr: 'مبدأ الإطفاء بالكود المصري 305: (الخنق - Smothering) عبر أنظمة ثاني أكسيد الكربون CO2 ورغوة الإطفاء والغازات النظيفة لحجب الأكسجين.'
-    },
-    reaction: {
-      titleAr: 'التفاعل الكيميائي المتسلسل (Chain Reaction)',
-      titleEn: 'Uninhibited Chemical Chain Reaction',
-      color: '#ec4899',
-      bgGrad: 'linear-gradient(135deg, rgba(236, 72, 153, 0.15), rgba(168, 85, 247, 0.05))',
-      icon: Sparkles,
-      summaryAr: 'التفاعل التفاعلي بين الجذور الحرة للوقود والأكسجين، وهو الركن الرابع في هرم الحريق (Fire Tetrahedron).',
-      codePrincipleAr: 'مبدأ الإطفاء بالكود المصري 305: (تثبيط التفاعل - Chemical Inhibition) باستخدام البودرة الكيماوية الجافة وأنظمة الإطفاء بالغازات النظيفة (FM-200 / Novec).'
-    }
-  };
-
-  const currentDetail = triangleDetails[activeSide];
 
   return (
     <div style={{
@@ -271,59 +224,44 @@ export default function SplashScreen({
                   🔥
                 </text>
 
-                {/* Right Side: Heat Edge (Top to Bottom-Right) */}
+                {/* Right Side: Heat Edge */}
                 <line 
                   x1="150" y1="30" x2="270" y2="240" 
                   stroke="url(#heatGrad)" 
-                  strokeWidth={activeSide === 'heat' ? '8' : '5'}
+                  strokeWidth="6"
                   strokeLinecap="round"
-                  style={{ cursor: 'pointer', transition: 'stroke-width 0.2s' }}
-                  onClick={() => setActiveSide('heat')}
                 />
 
-                {/* Bottom Side: Fuel Edge (Bottom-Right to Bottom-Left) */}
+                {/* Bottom Side: Fuel Edge */}
                 <line 
                   x1="270" y1="240" x2="30" y2="240" 
                   stroke="url(#fuelGrad)" 
-                  strokeWidth={activeSide === 'fuel' ? '8' : '5'}
+                  strokeWidth="6"
                   strokeLinecap="round"
-                  style={{ cursor: 'pointer', transition: 'stroke-width 0.2s' }}
-                  onClick={() => setActiveSide('fuel')}
                 />
 
-                {/* Left Side: Oxygen Edge (Bottom-Left to Top) */}
+                {/* Left Side: Oxygen Edge */}
                 <line 
                   x1="30" y1="240" x2="150" y2="30" 
                   stroke="url(#oxygenGrad)" 
-                  strokeWidth={activeSide === 'oxygen' ? '8' : '5'}
+                  strokeWidth="6"
                   strokeLinecap="round"
-                  style={{ cursor: 'pointer', transition: 'stroke-width 0.2s' }}
-                  onClick={() => setActiveSide('oxygen')}
                 />
 
                 {/* Vertex 1: Top (Heat / الحرارة) */}
-                <g 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => setActiveSide('heat')}
-                >
+                <g>
                   <circle cx="150" cy="30" r="18" fill="#1e293b" stroke="#ef4444" strokeWidth="3" />
                   <circle cx="150" cy="30" r="8" fill="#ef4444" />
                 </g>
 
                 {/* Vertex 2: Bottom-Right (Fuel / الوقود) */}
-                <g 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => setActiveSide('fuel')}
-                >
+                <g>
                   <circle cx="270" cy="240" r="18" fill="#1e293b" stroke="#f59e0b" strokeWidth="3" />
                   <circle cx="270" cy="240" r="8" fill="#f59e0b" />
                 </g>
 
                 {/* Vertex 3: Bottom-Left (Oxygen / الأكسجين) */}
-                <g 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => setActiveSide('oxygen')}
-                >
+                <g>
                   <circle cx="30" cy="240" r="18" fill="#1e293b" stroke="#06b6d4" strokeWidth="3" />
                   <circle cx="30" cy="240" r="8" fill="#06b6d4" />
                 </g>
@@ -331,22 +269,19 @@ export default function SplashScreen({
 
               {/* Labels on vertices */}
               <div 
-                onClick={() => setActiveSide('heat')}
                 style={{
                   position: 'absolute',
                   top: '-8px',
                   left: '50%',
                   transform: 'translateX(-50%)',
-                  background: activeSide === 'heat' ? '#dc2626' : 'rgba(15, 23, 42, 0.9)',
+                  background: '#dc2626',
                   color: '#ffffff',
-                  padding: '3px 10px',
+                  padding: '4px 12px',
                   borderRadius: '999px',
                   border: '1px solid #ef4444',
-                  fontSize: '0.72rem',
+                  fontSize: '0.74rem',
                   fontWeight: 800,
-                  cursor: 'pointer',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
-                  transition: 'all 0.2s ease',
                   whiteSpace: 'nowrap'
                 }}
               >
@@ -354,21 +289,18 @@ export default function SplashScreen({
               </div>
 
               <div 
-                onClick={() => setActiveSide('fuel')}
                 style={{
                   position: 'absolute',
                   bottom: '-12px',
                   right: '-10px',
-                  background: activeSide === 'fuel' ? '#d97706' : 'rgba(15, 23, 42, 0.9)',
+                  background: '#d97706',
                   color: '#ffffff',
-                  padding: '3px 10px',
+                  padding: '4px 12px',
                   borderRadius: '999px',
                   border: '1px solid #f59e0b',
-                  fontSize: '0.72rem',
+                  fontSize: '0.74rem',
                   fontWeight: 800,
-                  cursor: 'pointer',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
-                  transition: 'all 0.2s ease',
                   whiteSpace: 'nowrap'
                 }}
               >
@@ -376,60 +308,23 @@ export default function SplashScreen({
               </div>
 
               <div 
-                onClick={() => setActiveSide('oxygen')}
                 style={{
                   position: 'absolute',
                   bottom: '-12px',
                   left: '-10px',
-                  background: activeSide === 'oxygen' ? '#0891b2' : 'rgba(15, 23, 42, 0.9)',
+                  background: '#0891b2',
                   color: '#ffffff',
-                  padding: '3px 10px',
+                  padding: '4px 12px',
                   borderRadius: '999px',
                   border: '1px solid #06b6d4',
-                  fontSize: '0.72rem',
+                  fontSize: '0.74rem',
                   fontWeight: 800,
-                  cursor: 'pointer',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
-                  transition: 'all 0.2s ease',
                   whiteSpace: 'nowrap'
                 }}
               >
                 {isAr ? 'الأكسجين (O₂)' : 'OXYGEN'}
               </div>
-            </div>
-
-            {/* Quick interactive note */}
-            <div style={{
-              marginTop: '18px',
-              fontSize: '0.74rem',
-              color: '#94a3b8',
-              textAlign: 'center',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}>
-              <Info size={13} color="#f97316" />
-              <span>{isAr ? 'انقر على أي ضلع أو مركز المثلث لاستعراض مبدأ الإطفاء بالكود' : 'Click any side to explore code extinguishment principles'}</span>
-            </div>
-
-            {/* Selected Element Box */}
-            <div style={{
-              marginTop: '12px',
-              width: '100%',
-              background: currentDetail.bgGrad,
-              border: `1px solid ${currentDetail.color}40`,
-              borderRadius: '12px',
-              padding: '12px 14px',
-              fontSize: '0.78rem',
-              textAlign: isAr ? 'right' : 'left'
-            }}>
-              <div style={{ fontWeight: 800, color: currentDetail.color, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                <currentDetail.icon size={14} />
-                <span>{isAr ? currentDetail.titleAr : currentDetail.titleEn}</span>
-              </div>
-              <p style={{ color: '#cbd5e1', lineHeight: 1.5, margin: 0, fontSize: '0.75rem' }}>
-                {isAr ? currentDetail.codePrincipleAr : currentDetail.summaryAr}
-              </p>
             </div>
           </div>
 
@@ -499,15 +394,15 @@ export default function SplashScreen({
                 padding: '4px 14px',
                 borderBottomRightRadius: isAr ? '12px' : 0,
                 borderBottomLeftRadius: isAr ? 0 : '12px',
-                fontSize: '0.7rem',
+                fontSize: '0.72rem',
                 fontWeight: 900,
                 display: 'flex',
                 alignItems: 'center',
-                gap: '4px',
+                gap: '5px',
                 letterSpacing: '0.5px'
               }}>
                 <Award size={13} />
-                <span>{isAr ? 'المطور والاستشاري المصمم' : 'Lead Designer & Engineer'}</span>
+                <span>{isAr ? 'مصمم ومطور البرنامج' : 'Program Designer & Developer'}</span>
               </div>
 
               <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -525,10 +420,10 @@ export default function SplashScreen({
                   {isAr ? 'المهندس / أحمد فوزي' : 'Eng. Ahmed Fawzy'}
                 </div>
 
-                <div style={{ fontSize: '0.82rem', color: '#e2e8f0', fontWeight: 600 }}>
+                <div style={{ fontSize: '0.84rem', color: '#fed7aa', fontWeight: 700 }}>
                   {isAr 
-                    ? 'استشاري ومصمم أنظمة السلامة ومكافحة الحريق والأنظمة الهندسية'
-                    : 'Fire Protection & Life Safety Systems Design Consultant'}
+                    ? 'مهندس أنظمة مكافحة وإنذار الحريق | مصمم ومطور البرنامج'
+                    : 'Fire Fighting & Alarm Systems Engineer | Program Designer & Developer'}
                 </div>
 
                 <div style={{
@@ -545,8 +440,8 @@ export default function SplashScreen({
                   </div>
                   <div style={{ fontSize: '0.73rem', color: '#94a3b8' }}>
                     {isAr 
-                      ? 'مطور بموجب حقوق الملكية الفكرية والهندسية للحلول البرمجية المتخصصة في كود الحريق المصري والتطبيقات الاستشارية.'
-                      : 'Proprietary engineering software compliant with Egyptian Civil Protection & Fire Code Standards.'}
+                      ? 'مطور بموجب حقوق الملكية الفكرية والبرمجية الهندسية المتخصصة في كود الحريق المصري وأنظمة الإطفاء والسلامة.'
+                      : 'Proprietary engineering software designed for Egyptian Fire Code 305 and fire safety systems.'}
                   </div>
                 </div>
               </div>

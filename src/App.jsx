@@ -429,12 +429,12 @@ export default function App() {
               </div>
               <div style={{ textAlign: lang === 'ar' ? 'right' : 'left' }}>
                 <div style={{ color: '#fed7aa', fontWeight: 800, fontSize: '0.9rem' }}>
-                  {lang === 'ar' ? 'تصميم وتطوير: المهندس / أحمد فوزي' : 'Designed & Engineered by Eng. Ahmed Fawzy'}
+                  {lang === 'ar' ? 'المهندس / أحمد فوزي — مصمم ومطور البرنامج' : 'Eng. Ahmed Fawzy — Program Designer & Developer'}
                 </div>
                 <div style={{ color: '#94a3b8', fontSize: '0.74rem' }}>
                   {lang === 'ar' 
-                    ? 'استشاري هندسة السلامة ومكافحة الحريق والأنظمة الكودية' 
-                    : 'Fire Protection & Life Safety Engineering Consultant'}
+                    ? 'مهندس أنظمة مكافحة وإنذار الحريق' 
+                    : 'Fire Fighting & Alarm Systems Engineer'}
                 </div>
               </div>
             </div>

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Upload, 
   AlertTriangle, 
@@ -14,10 +14,21 @@ import {
   Car,
   FileCheck
 } from 'lucide-react';
+import { toLatinDigits } from '../services/assessmentEngine';
 
 export default function DrawingReview({ lang, onApplyExtractedFacts }) {
   const isAr = lang === 'ar';
   const fileInputRef = useRef(null);
+  const createdUrlsRef = useRef([]);
+
+  // Revoke object URLs on component unmount
+  useEffect(() => {
+    return () => {
+      createdUrlsRef.current.forEach(u => {
+        try { URL.revokeObjectURL(u); } catch {}
+      });
+    };
+  }, []);
 
   // Initial drawings repository
   const [files, setFiles] = useState([
@@ -224,16 +235,30 @@ export default function DrawingReview({ lang, onApplyExtractedFacts }) {
   const processUploadedFile = (file) => {
     if (!file) return;
 
-    setIsAnalyzing(true);
+    const MAX_SIZE = 35 * 1024 * 1024; // 35 MB
+    if (file.size > MAX_SIZE) {
+      alert(isAr ? 'حجم الملف يتجاوز الحد الأقصى المسموح به (35 ميجابايت).' : 'File size exceeds maximum allowed 35 MB.');
+      return;
+    }
+
     const fileName = file.name;
     const lowerName = fileName.toLowerCase();
     const isDwg = lowerName.endsWith('.dwg') || lowerName.endsWith('.dxf');
     const isPdf = lowerName.endsWith('.pdf');
     const isImage = file.type.startsWith('image/');
+    const isValidExt = isDwg || isPdf || isImage || lowerName.endsWith('.png') || lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg') || lowerName.endsWith('.svg');
+
+    if (!isValidExt) {
+      alert(isAr ? 'صيغة الملف غير مدعومة. يرجى اختيار ملف CAD (DWG / DXF) أو PDF أو صورة للمخطط.' : 'Unsupported format. Please upload CAD (DWG/DXF), PDF, or drawing image.');
+      return;
+    }
+
+    setIsAnalyzing(true);
 
     let imageUrl = null;
     if (isImage) {
       imageUrl = URL.createObjectURL(file);
+      createdUrlsRef.current.push(imageUrl);
     }
 
     // Intelligent Occupancy & Geometry Parser
@@ -610,17 +635,44 @@ export default function DrawingReview({ lang, onApplyExtractedFacts }) {
 
             {/* Verification & Compliance Note */}
             <div style={{ marginTop: '14px', padding: '10px 12px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.76rem', color: '#475569', lineHeight: 1.5 }}>
-              <strong>{isAr ? 'التدقيق الكودي المعتمد: ' : 'Code Verification: '}</strong>
+              <strong>{isAr ? 'التدقيق الكودي الاسترشادي: ' : 'Educational Simulation: '}</strong>
               {activeFile.limitations}
             </div>
 
             <button
-              onClick={() => onApplyExtractedFacts && onApplyExtractedFacts(activeFile.detectedFacts)}
+              onClick={() => {
+                if (!onApplyExtractedFacts) return;
+                const raw = activeFile.detectedFacts || {};
+                const extractNum = (val) => {
+                  if (!val) return undefined;
+                  const numStr = toLatinDigits(String(val)).replace(/[^\d.]/g, '');
+                  const parsed = parseFloat(numStr);
+                  return !isNaN(parsed) && parsed > 0 ? parsed : undefined;
+                };
+
+                const cleanArea = extractNum(raw.floorAreaDetected) || (activeFile.layoutType === 'basement' ? 1200 : 650);
+                const cleanStair = extractNum(raw.stairWidthValue) || 1.20;
+                const cleanDoor = extractNum(raw.doorWidthValue) || 0.90;
+                const cleanTravel = extractNum(raw.travelDistValue) || 35.0;
+
+                const payload = {
+                  ...raw,
+                  floorArea: cleanArea,
+                  stairWidth: cleanStair,
+                  doorWidth: cleanDoor,
+                  travelDistance: cleanTravel,
+                  aboveGroundFloors: activeFile.layoutType === 'basement' ? 1 : 6,
+                  basementFloors: activeFile.layoutType === 'basement' ? 1 : 0,
+                  basementUse: activeFile.layoutType === 'basement' ? 'parking' : 'none'
+                };
+
+                onApplyExtractedFacts(payload);
+              }}
               className="btn-secondary"
               style={{ width: '100%', marginTop: '14px', fontSize: '0.82rem', justifyContent: 'center' }}
             >
               <FileCheck size={14} style={{ display: 'inline', marginLeft: '6px' }} />
-              {isAr ? 'تأكيد ونقل البيانات لمحرك التقييم' : 'Confirm & Apply to Assessment'}
+              {isAr ? 'تأكيد ونقل البيانات الرقمية لمحرك التقييم' : 'Confirm & Apply Numeric Facts to Assessment'}
             </button>
           </div>
 
@@ -628,6 +680,28 @@ export default function DrawingReview({ lang, onApplyExtractedFacts }) {
 
         {/* Right Column: AutoCAD Model Space Canvas & Object Inspector */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          
+          {/* Engineering Honesty & Simulation Mode Notice */}
+          <div style={{
+            background: '#fffbeb',
+            border: '1px solid #fde68a',
+            borderRadius: '10px',
+            padding: '12px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            fontSize: '0.82rem',
+            color: '#92400e',
+            lineHeight: 1.5
+          }}>
+            <AlertTriangle size={20} style={{ flexShrink: 0, color: '#d97706' }} />
+            <div>
+              <strong>{isAr ? 'بيئة محاكاة وتدريب هندسي تفاعلي (Interactive CAD Simulation): ' : 'Interactive CAD Simulation Mode: '}</strong>
+              {isAr 
+                ? 'تعمل هذه الأداة كبيئة محاكاة رقمية توضيحية لربط المخططات ببنود الكود المصري ٢٠٢٦. ملفات DWG الثنائية المعقدة تتطلب عادةً خادم CAD متخصص لاستخراج الـ Entities الأصلية؛ القياسات ونسب المطابقة هنا استرشادية وتدريبية ولا تغني عن الاعتماد الهندسي المباشر.'
+                : 'This viewer operates as a demonstration and educational CAD simulation environment. Complex binary DWG extraction requires dedicated backend CAD converters; metrics and compliance overlays shown here are pedagogical references and do not replace certified manual engineer reviews.'}
+            </div>
+          </div>
           
           <div className="card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', background: '#0a0f1d', border: '1px solid #1e293b' }}>
             
@@ -1175,7 +1249,7 @@ export default function DrawingReview({ lang, onApplyExtractedFacts }) {
             <div style={{ marginTop: '8px', background: '#020617', border: '1px solid #1e293b', borderRadius: '4px', padding: '6px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.74rem', color: '#94a3b8', fontFamily: 'monospace' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ color: '#38bdf8', fontWeight: 700 }}>COMMAND:</span>
-                <span>_EFC_AUDIT_2026 [Loaded: {activeFile.name} | Entities: 4,820 | Status: Geometry Verified]</span>
+                <span>_EFC_SIMULATION_2026 [Loaded: {activeFile.name} | Mode: Educational CAD Simulation & Verification Overlay]</span>
               </div>
               <div style={{ display: 'flex', gap: '10px', color: '#64748b' }}>
                 <span style={{ color: '#10b981' }}>SNAP: ON</span>

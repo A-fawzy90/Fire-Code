@@ -38,45 +38,108 @@ export default function IssueWorkspace({ lang, selectedProject, onGenerateReport
   const [selectedIssueCategory, setSelectedIssueCategory] = useState('egress');
   const [analyzed, setAnalyzed] = useState(true);
 
-  // Pre-configured realistic corrective options for discussion
-  const correctiveOptions = [
-    {
-      id: 'opt-a',
-      titleAr: 'البديل الأول: إنشاء ممر هروب أفقي محمي (Horizontal Exit) مع زيادة معدل الرشاشات',
-      titleEn: 'Option A: Pressurized Horizontal Exit Corridor with Enhanced Fast-Response Sprinklers',
-      advantagesAr: 'لا يتطلب نزع ملكية أو تعدي على خط التنظيم الخارجي، ويوفر منطقة لجوء آمنة بنفس الطابق.',
-      advantagesEn: 'No external boundary encroachment, creates a safe refuge area on the same level.',
-      constraintsAr: 'يتطلب التضحية بجزء من المساحة الإيجارية وتأكيد مقاومة الفاصل الحريقي ساعتين مع أبواب ذاتية الغلق.',
-      constraintsEn: 'Requires partial retail area reduction and certified 2-hr fire-rated wall with magnetic hold-open doors.',
-      assumptionsAr: 'افتراض قدرة البلاطة الخرسانية القائمة على تحمل عزل الحريق ساعتين.',
-      codeCitation: 'كود ٣٠٥/١ - الباب الرابع - البند ٤-٣-٢ (المخارج الأفقية)',
-      authorityApprovalLikelihood: 'خيار معتمد كودياً كبديل هندسي معادل بموافقة اللجنة الفنية الاستشارية للحماية المدنية'
-    },
-    {
-      id: 'opt-b',
-      titleAr: 'البديل الثاني: عزل الدرج الداخلي القائم بحوائط ساعتين وتوفير نظام ضغط هواء موجب مع رشاشات ESFR',
-      titleEn: 'Option B: Enclose Existing Staircase with 2-Hr Shaft & Positive Pressure Fans + ESFR Sprinklers',
-      advantagesAr: 'أقل تكلفة إنشائية، ويحمي مسار الهروب القائم بالكامل من تسرب الدخان والحرارة.',
-      advantagesEn: 'Lower structural disruption, protects existing staircase from smoke penetration.',
-      constraintsAr: 'يتطلب مساراً كهربائياً آمناً ومولد طوارئ لتشغيل مراوح الضغط الموجب دون انقطاع.',
-      constraintsEn: 'Requires dedicated fire-rated wiring and standby generator for uninterrupted pressurization fan operation.',
-      assumptionsAr: 'افتراض توفر مخرج مباشر في أسفل الدرج يؤدي للشارع الخارجي.',
-      codeCitation: 'كود ٣٠٥/١ - الباب الخامس - البند ٥-١-٤ (السلالم المضغوطة)',
-      authorityApprovalLikelihood: 'مقبول بنسبة عالية مع تقديم دراسة سريان الهواء معتمدة من استشاري ميكانيكا'
-    },
-    {
-      id: 'opt-c',
-      titleAr: 'البديل الثالث: إعادة تقسيم الإشغال وتخفيض الحمولة الاستيعابية (Occupant Load Capping)',
-      titleEn: 'Option C: Occupancy Compartmentalization & Occupant Load Reduction',
-      advantagesAr: 'تخفيض متطلبات تدفق الأشخاص دون أعمال هدم وتعديل إنشائي واسع.',
-      advantagesEn: 'Reduces required egress width without major civil demolition.',
-      constraintsAr: 'يفرض قيوداً تشغيلية وتجارية على عدد الزوار والمحلات المسموح بتشغيلها.',
-      constraintsEn: 'Imposes operational capacity limits on the commercial facility.',
-      assumptionsAr: 'افتراض إمكانية التحكم الإداري والأمني في عدد الداخلين للمبنى.',
-      codeCitation: 'كود ٣٠٥/١ - الباب الثاني - البند ٢-١ (كثافة الإشغال)',
-      authorityApprovalLikelihood: 'يتطلب تعهداً موثقاً من مالك المشروع وموافقة مديرية أمن الحماية المدنية المختصة'
-    }
-  ];
+  // Categorized realistic corrective options with full Arabic & English data
+  const OPTIONS_BY_CATEGORY = {
+    egress: [
+      {
+        id: 'opt-a',
+        titleAr: 'البديل الأول: إنشاء ممر هروب أفقي محمي (Horizontal Exit) مع زيادة معدل الرشاشات',
+        titleEn: 'Option A: Pressurized Horizontal Exit Corridor with Enhanced Fast-Response Sprinklers',
+        advantagesAr: 'لا يتطلب نزع ملكية أو تعدي على خط التنظيم الخارجي، ويوفر منطقة لجوء آمنة بنفس الطابق.',
+        advantagesEn: 'No external boundary encroachment, creates a safe refuge area on the same level.',
+        constraintsAr: 'يتطلب التضحية بجزء من المساحة الإيجارية وتأكيد مقاومة الفاصل الحريقي ساعتين مع أبواب ذاتية الغلق.',
+        constraintsEn: 'Requires partial retail area reduction and certified 2-hr fire-rated wall with magnetic hold-open doors.',
+        assumptionsAr: 'افتراض قدرة البلاطة الخرسانية القائمة على تحمل عزل الحريق ساعتين.',
+        assumptionsEn: 'Assumption of existing reinforced concrete slab achieving 2-hr fire resistance rating.',
+        codeCitation: 'كود ٣٠٥/١ - الباب الرابع - البند ٤-٣-٢ (المخارج الأفقية)',
+        authorityApprovalLikelihood: 'خيار معتمد كودياً كبديل هندسي معادل بموافقة اللجنة الفنية الاستشارية للحماية المدنية'
+      },
+      {
+        id: 'opt-b',
+        titleAr: 'البديل الثاني: عزل الدرج الداخلي القائم بحوائط ساعتين وتوفير نظام ضغط هواء موجب مع رشاشات ESFR',
+        titleEn: 'Option B: Enclose Existing Staircase with 2-Hr Shaft & Positive Pressure Fans + ESFR Sprinklers',
+        advantagesAr: 'أقل تكلفة إنشائية، ويحمي مسار الهروب القائم بالكامل من تسرب الدخان والحرارة.',
+        advantagesEn: 'Lower structural disruption, protects existing staircase from smoke penetration.',
+        constraintsAr: 'يتطلب مساراً كهربائياً آمناً ومولد طوارئ لتشغيل مراوح الضغط الموجب دون انقطاع.',
+        constraintsEn: 'Requires dedicated fire-rated wiring and standby generator for uninterrupted pressurization fan operation.',
+        assumptionsAr: 'افتراض توفر مخرج مباشر في أسفل الدرج يؤدي للشارع الخارجي.',
+        assumptionsEn: 'Assumption of direct ground floor discharge leading safely to public way.',
+        codeCitation: 'كود ٣٠٥/١ - الباب الخامس - البند ٥-١-٤ (السلالم المضغوطة)',
+        authorityApprovalLikelihood: 'مقبول بنسبة عالية مع تقديم دراسة سريان الهواء معتمدة من استشاري ميكانيكا'
+      },
+      {
+        id: 'opt-c',
+        titleAr: 'البديل الثالث: إعادة تقسيم الإشغال وتخفيض الحمولة الاستيعابية (Occupant Load Capping)',
+        titleEn: 'Option C: Occupancy Compartmentalization & Occupant Load Reduction',
+        advantagesAr: 'تخفيض متطلبات تدفق الأشخاص دون أعمال هدم وتعديل إنشائي واسع.',
+        advantagesEn: 'Reduces required egress width without major civil demolition.',
+        constraintsAr: 'يفرض قيوداً تشغيلية وتجارية على عدد الزوار والمحلات المسموح بتشغيلها.',
+        constraintsEn: 'Imposes operational capacity limits on the commercial facility.',
+        assumptionsAr: 'افتراض إمكانية التحكم الإداري والأمني في عدد الداخلين للمبنى.',
+        assumptionsEn: 'Assumption of strict administrative access control on maximum occupant density.',
+        codeCitation: 'كود ٣٠٥/١ - الباب الثاني - البند ٢-١ (كثافة الإشغال)',
+        authorityApprovalLikelihood: 'يتطلب تعهداً موثقاً من مالك المشروع وموافقة مديرية أمن الحماية المدنية المختصة'
+      }
+    ],
+    transformers: [
+      {
+        id: 'opt-t1',
+        titleAr: 'البديل الأول: حماية الغرفة بنظام إطفاء غازي تلقائي (Clean Agent) مع عزل إنشائي ٣ ساعات',
+        titleEn: 'Option A: Clean Agent Total Flooding System with 3-Hr Fire Rated Enclosure',
+        advantagesAr: 'إخماد سريع فوري دون إتلاف المعدات الكهربائية الحية ودون الحاجة لتصريف مياه.',
+        advantagesEn: 'Instant non-conductive suppression without water damage to live electrical equipment.',
+        constraintsAr: 'يتطلب إحكام الغرفة (Room Integrity Test) وخوانق حريق آلية تغلق قبل التفريغ.',
+        constraintsEn: 'Requires certified room envelope integrity and automatic motorized fire dampers.',
+        assumptionsAr: 'افتراض إمكانية فصل التغذية الكهربائية آلياً (Trip Coil) عند إشارة الإنذار.',
+        assumptionsEn: 'Assumption of automatic trip-coil interlock disconnecting power prior to discharge.',
+        codeCitation: 'كود ٣٠٥/٢ - الباب الرابع ص ٤-١٢ وكود ٣٠٥/٣ ص ١-١٨',
+        authorityApprovalLikelihood: 'مطابق تماماً لاشتراطات كود الحماية المدنية لغرف المحولات'
+      },
+      {
+        id: 'opt-t2',
+        titleAr: 'البديل الثاني: استبدال المحول الزيتي بمحول جاف (Dry-Type Transformer)',
+        titleEn: 'Option B: Replace Oil-Filled with Cast-Resin Dry-Type Transformer',
+        advantagesAr: 'إلغاء خطر انتشار الزيت المشتعل وتخفيض متطلب العزل الحريقي إلى ساعتين فقط.',
+        advantagesEn: 'Eliminates pool fire risk and reduces required wall fire separation to 2 hours.',
+        constraintsAr: 'تكلفة استبدال المعدات مرتفعة نسبياً.',
+        constraintsEn: 'Higher initial capital expenditure for transformer equipment replacement.',
+        assumptionsAr: 'افتراض قدرة الشبكة وأبعاد الغرفة على استيعاب المحول الجاف.',
+        assumptionsEn: 'Assumption of adequate ventilation and physical dimensions for dry-type cooling.',
+        codeCitation: 'كود ٣٠٥/١ - الباب الثالث ص ٣-١٥',
+        authorityApprovalLikelihood: 'مقبول ومعتمد ويوصى به للمباني الإدارية والتجارية المغلقة'
+      }
+    ],
+    smoke: [
+      {
+        id: 'opt-s1',
+        titleAr: 'البديل الأول: نظام سحب دخان ميكانيكي بمعدل ١٠ مرات/ساعة ومجاري هواء مقاومة ساعتين',
+        titleEn: 'Option A: Mechanical Smoke Exhaust System @ 10 ACH with 2-Hr Fire Rated Ductwork',
+        advantagesAr: 'سحب فعال للدخان والحرارة يضمن مسارات هروب مرئية لفرق الإنقاذ.',
+        advantagesEn: 'Effective smoke evacuation maintaining tenable egress conditions.',
+        constraintsAr: 'يتطلب فتحات تعويض هواء طبيعي أو ميكانيكي بنسبة ٧٥-٨٠٪ من معدل السحب.',
+        constraintsEn: 'Requires dedicated makeup air system delivering 75-80% of exhaust rate.',
+        assumptionsAr: 'افتراض توفر تغذية طوارئ كهربائية مستقلة للمراوح من المولد.',
+        assumptionsEn: 'Assumption of dual power supply from life-safety standby generator.',
+        codeCitation: 'كود ٣٠٥/٢ - الباب الخامس (التهوية وسحب الدخان) ص ٥-١١',
+        authorityApprovalLikelihood: 'الحل الكودي الإلزامي المعتمد من الحماية المدنية للبدرومات'
+      },
+      {
+        id: 'opt-s2',
+        titleAr: 'البديل الثاني: نظام مراوح الدفع النفاثة (Jet Fans) الموجهة مع نمذجة CFD',
+        titleEn: 'Option B: Impulse Jet Fan Ventilation System with Validated CFD Simulation',
+        advantagesAr: 'يلغي مجاري الهواء الضخمة ويوفر مساحات رأسية للسيارات والخدمات.',
+        advantagesEn: 'Eliminates extensive duct runs, saving critical ceiling clearance.',
+        constraintsAr: 'يتطلب تقديم دراسة محاكاة ديناميكا موائع حسابية (CFD) معتمدة من استشاري.',
+        constraintsEn: 'Requires certified CFD modeling showing velocity distribution and smoke clearance.',
+        assumptionsAr: 'افتراض تقسيم الجراج إلى مناطق دخان لا تتجاوز ٢٥٠٠ م² لكل منطقة.',
+        assumptionsEn: 'Assumption of smoke zoning not exceeding 2,500 m² per exhaust section.',
+        codeCitation: 'كود ٣٠٥/٢ - ملحق أنظمة التهوية النفاثة والقرار ٢٥٥/٢٠٢٦',
+        authorityApprovalLikelihood: 'مقبول لدى لجان الحماية المدنية بموجب دراسة CFD معتمدة'
+      }
+    ]
+  };
+
+  const correctiveOptions = OPTIONS_BY_CATEGORY[selectedIssueCategory] || OPTIONS_BY_CATEGORY.egress;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -116,6 +179,35 @@ export default function IssueWorkspace({ lang, selectedProject, onGenerateReport
         </h2>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div>
+            <label style={{ fontSize: '0.84rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
+              {isAr ? 'تصنيف الملاحظة الفنية / نوع المنظومة:' : 'Issue Category / System Type:'}
+            </label>
+            <select
+              value={selectedIssueCategory}
+              onChange={(e) => {
+                const cat = e.target.value;
+                setSelectedIssueCategory(cat);
+                if (cat === 'egress') {
+                  setIssueTitle(isAr ? 'تجاوز مسافة الارتحال بأحد أدوار المبنى وعدم وجود درج هروب ثانٍ مباشر' : 'Excess travel distance and single fire exit staircase');
+                  setIssueDescription(isAr ? 'مبنى قائم تم رصد مسار هروب بطول ٥٨ متراً ينتهي بدرج واحد غير معزول مع تعذر إنشاء درج خارجي بسبب ارتداد الجار.' : '58m travel distance leading to a single unrated staircase with boundary constraints.');
+                } else if (cat === 'transformers') {
+                  setIssueTitle(isAr ? 'وجود غرفة محول كهربائي ملاصقة لممر هروب رئيسي بدون عزل ٣ ساعات' : 'Transformer room adjacent to main egress path without 3-hr fire rating');
+                  setIssueDescription(isAr ? 'غرفة محول مغمور بالزيت تفتح أبوابها على ممر داخلي ولا تحتوي على وسيط إطفاء غازي تلقائي أو حوض احتواء زيت.' : 'Oil transformer room discharging onto internal corridor without clean agent suppression or bund wall.');
+                } else if (cat === 'smoke') {
+                  setIssueTitle(isAr ? 'قصور تهوية وسحب دخان بدروم جراج سيارات متعدد الطوابق' : 'Inadequate mechanical smoke exhaust in multi-level parking basement');
+                  setIssueDescription(isAr ? 'بدروم سيارات بمساحة ١٢٠٠ م² لا يحتوي على مجاري سحب دخان كودية (١٠ مرات/ساعة) أو فتحات تعويض هواء.' : '1200 m² parking basement lacking 10 ACH mechanical smoke extraction and makeup air dampers.');
+                }
+                setAnalyzed(true);
+              }}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #cbd5e1', fontFamily: 'inherit', fontSize: '0.92rem', color: '#0f172a', background: '#ffffff' }}
+            >
+              <option value="egress">{isAr ? 'مسارات الهروب والسلالم وعروض الأبواب (كود ٣٠٥/١)' : 'Egress Paths, Staircases & Door Widths (Code 305/1)'}</option>
+              <option value="transformers">{isAr ? 'غرف المحولات واللوحات الكهربائية والعزل الحريقي (كود ٣٠٥/١ و ٣٠٥/٢ و ٣٠٥/٣)' : 'Transformer & Electrical Rooms (Code 305/1, 305/2, 305/3)'}</option>
+              <option value="smoke">{isAr ? 'سحب دخان البدروم والجراجات ومراوح الضغط (كود ٣٠٥/٢ و ٣٠٥/٣)' : 'Basement Smoke Exhaust & Pressurization (Code 305/2, 305/3)'}</option>
+            </select>
+          </div>
+
           <div>
             <label style={{ fontSize: '0.84rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
               {isAr ? 'عنوان الملاحظة الفنية:' : 'Issue Title:'}

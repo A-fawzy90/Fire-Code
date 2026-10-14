@@ -661,19 +661,76 @@ body {
   }
 }
 
-.animate-spin {
+.animate-spin,
+.spin {
   animation: spin 1s linear infinite;
 }
 
-.animate-spin-slow {
+.animate-spin-slow,
+.spin-slow {
   animation: spin-slow 8s linear infinite;
 }
 
-.animate-fade-in {
+.animate-fade-in,
+.fadeIn {
   animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animate-pulse-glow {
   animation: pulseGlow 2.5s infinite ease-in-out;
 }
+
+/* Responsive Code Library Layout */
+.code-library-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .code-library-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Official Print Layout Optimization */
+@media print {
+  /* Hide non-printable navigation, assistants, banners, and modals */
+  nav,
+  .navbar,
+  .floating-assistant-container,
+  .no-print,
+  button,
+  .btn-primary,
+  .btn-secondary,
+  .modal-backdrop,
+  header {
+    display: none !important;
+  }
+
+  body, html {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11pt !important;
+  }
+
+  .main-content, .card {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Ensure high-contrast readable text in printed reports */
+  h1, h2, h3, h4, strong {
+    color: #000000 !important;
+  }
+
+  a {
+    text-decoration: none !important;
+    color: #000000 !important;
+  }
+}
+
 

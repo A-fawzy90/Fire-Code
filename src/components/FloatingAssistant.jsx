@@ -158,9 +158,37 @@ export default function FloatingAssistant({ lang, selectedProject, isOpen, setIs
   };
 
   const copyToClipboard = (text, id) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+    const fallbackCopy = () => {
+      try {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        textArea.remove();
+        setCopiedId(id);
+        setTimeout(() => setCopiedId(null), 2000);
+      } catch (err) {
+        console.warn('Fallback copy error:', err);
+      }
+    };
+
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          setCopiedId(id);
+          setTimeout(() => setCopiedId(null), 2000);
+        }).catch(() => fallbackCopy());
+      } else {
+        fallbackCopy();
+      }
+    } catch {
+      fallbackCopy();
+    }
   };
 
   const handleReset = () => {

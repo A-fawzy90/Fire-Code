@@ -12,6 +12,7 @@ import SplashScreen from './components/SplashScreen';
 import EngineeringCalculators from './components/EngineeringCalculators';
 import FirebaseSyncModal from './components/FirebaseSyncModal';
 import RejectionsAndInterpretations from './components/RejectionsAndInterpretations';
+import { deleteProjectFromFirestore } from './services/firebaseConfig';
 
 // Resilient Error Boundary to ensure tabs never freeze
 class TabErrorBoundary extends React.Component {
@@ -227,7 +228,7 @@ export default function App() {
     document.body.dir = lang === 'ar' ? 'rtl' : 'ltr';
   }, [lang]);
 
-  // Handle Project Deletion
+  // Handle Project Deletion (local + Cloud sync)
   const handleDeleteProject = (projectId) => {
     setProjects(prev => {
       const updated = prev.filter(p => p.id !== projectId);
@@ -237,6 +238,10 @@ export default function App() {
       const remaining = projects.filter(p => p.id !== projectId);
       setSelectedProjectId(remaining.length > 0 ? remaining[0].id : null);
     }
+    // Delete from Firestore if configured
+    deleteProjectFromFirestore(projectId).catch(err => {
+      console.warn('Firestore cloud deletion skipped or not connected:', err?.message);
+    });
   };
 
   // Handle Restoring Default Sample Projects
@@ -281,12 +286,17 @@ export default function App() {
     if (!selectedProjectId) return;
     setProjects(prev => prev.map(p => {
       if (p.id === selectedProjectId) {
+        const updatedFacts = {
+          ...p.facts,
+          ...extractedFacts,
+          floorArea: extractedFacts.floorArea || p.facts?.floorArea,
+          stairWidth: extractedFacts.stairWidth || p.facts?.stairWidth,
+          doorWidth: extractedFacts.doorWidth || p.facts?.doorWidth,
+          travelDistance: extractedFacts.travelDistance || p.facts?.travelDistance
+        };
         return {
           ...p,
-          facts: {
-            ...p.facts,
-            ...extractedFacts
-          }
+          facts: updatedFacts
         };
       }
       return p;

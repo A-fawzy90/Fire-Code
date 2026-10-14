@@ -80,39 +80,39 @@ export default function AdminView({ lang }) {
       if (providerId === 'local-rag') {
         setTestResult({
           success: true,
-          messageAr: 'الاتصال ناجح: محرك الاسترجاع المعزز المحلي (Grounding) يعمل بكفاءة ومربوط بـ ٨٠٣ صفحات مفهرسة من الكود المصري ٢٠٢٦.',
-          messageEn: 'Connection Successful: Local Grounded RAG is active and grounded in 803 indexed pages of the 2026 Egyptian Fire Code.'
+          messageAr: 'الاتصال المحلي نشط: قاعدة المعرفة المحلية المعتمدة الصادرة بقرار ٢٥٥ لسنة ٢٠٢٦ جاهزة وتعمل بدون إنترنت (Offline RAG).',
+          messageEn: 'Local Grounded RAG is active and operational offline with official 2026 Code provisions.'
         });
       } else if (providerId === 'ms-copilot') {
         if (!copilotApiKey || !copilotEndpoint) {
           setTestResult({
             success: false,
-            messageAr: 'فشل الاختبار: لم يتم إدخال مفتاح الـ API أو نقطة نهاية Microsoft Copilot / Azure Endpoint. لا يمكن تفعيل هذا المزود دون إعداد صالح.',
-            messageEn: 'Test Failed: API Key or Endpoint missing. Copilot integration cannot be marked active without verified credentials.'
+            messageAr: 'فحص الإعدادات: لم يتم إدخال مفتاح الـ API أو رابط الـ Endpoint. لا يمكن حفظ أو تفعيل المزود دون بيانات صالحة.',
+            messageEn: 'Validation Notice: API Key or Endpoint missing.'
           });
         } else {
           setTestResult({
             success: true,
-            messageAr: 'تم التحقق من نقطة نهاية Microsoft Copilot بنجاح.',
-            messageEn: 'Microsoft Copilot endpoint verified successfully.'
+            messageAr: 'تم التحقق من صحة تنسيق الرابط والمفتاح محلياً. ملاحظة أمنية: في بيئة الإنتاج المؤسسية، يُوصى بربط المفاتيح عبر خادم وسيط (Backend Proxy) لمنع كشفها في المتصفح.',
+            messageEn: 'Format verified locally. Note: In enterprise production, API keys should be handled via a secure backend proxy to prevent client-side exposure.'
           });
         }
       } else if (providerId === 'gemini-custom') {
         if (!geminiApiKey) {
           setTestResult({
             success: false,
-            messageAr: 'فشل الاختبار: يرجى إدخال مفتاح ترخيص Gemini API.',
-            messageEn: 'Test Failed: Please provide a valid Gemini API key.'
+            messageAr: 'فحص الإعدادات: يرجى إدخال مفتاح Google Gemini API أولاً.',
+            messageEn: 'Validation Notice: Please provide a Gemini API key first.'
           });
         } else {
           setTestResult({
             success: true,
-            messageAr: 'تم الاتصال بواجهة Gemini بنجاح.',
-            messageEn: 'Gemini endpoint connected successfully.'
+            messageAr: 'تم التحقق من صحة تنسيق مفتاح Gemini محلياً. تنبيه أمني: استخدام المفتاح في المتصفح مخصص للاختبار الفردي؛ يُوصى باستخدام Backend Proxy في النشر المؤسسي.',
+            messageEn: 'Gemini Key format verified locally. For production deployments, route requests through a secure backend proxy.'
           });
         }
       }
-    }, 1200);
+    }, 800);
   };
 
   return (
@@ -204,6 +204,17 @@ export default function AdminView({ lang }) {
       {activeSubTab === 'providers' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
+          {/* Security and Architecture Notice */}
+          <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 'var(--radius-lg)', padding: '16px 20px', fontSize: '0.86rem', color: '#92400e', lineHeight: 1.6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+              <Key size={18} color="#d97706" />
+              <strong style={{ color: '#b45309' }}>{isAr ? 'تنبيه أمني ومعماري هام بخصوص مفاتيح الـ API:' : 'Important Architecture & Security Warning:'}</strong>
+            </div>
+            {isAr 
+              ? 'تطبيق الويب يعمل بصورة كاملة من جهة العميل (Client-Side Single Page Application). أي مفاتيح API تُدخل هنا تُحفظ في ذاكرة المتصفح المحلية (localStorage) وتُرسل مباشرة من جهازك. للاستخدام في المشروعات الحساسة أو النشر المؤسسي، يجب دائماً تفويض خادم وسيط (Backend Proxy / Cloud Function) لإخفاء المفاتيح وتأمين الاستدعاءات.'
+              : 'This application runs entirely client-side. Keys entered here are stored in localStorage and called directly from your browser. In commercial or sensitive deployments, always route AI requests through a secure backend proxy.'}
+          </div>
+
           <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 'var(--radius-lg)', padding: '16px 20px', fontSize: '0.86rem', color: '#1e40af' }}>
             <strong>{isAr ? 'مبدأ الشفافية في الذكاء الاصطناعي: ' : 'AI Transparency Principle: '}</strong>
             {isAr 
@@ -429,15 +440,20 @@ export default function AdminView({ lang }) {
           <div className="card">
             <h3 className="card-title">
               <UserCheck size={20} color="#059669" />
-              {isAr ? 'أدوار وصلاحيات الوصول (RBAC)' : 'Role-Based Access Control'}
+              {isAr ? 'هيكل الصلاحيات المقترح للمؤسسات (Enterprise RBAC Schema)' : 'Proposed Enterprise RBAC Schema'}
             </h3>
+            <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '10px' }}>
+              {isAr 
+                ? 'مخطط هيكلي استرشادي لتوزيع الصلاحيات عند ربط التطبيق مع خادم هوية مؤسسي (SSO / IAM). النسخة الحالية تعمل بجلسة فردية محلية آمنة (Single-User Local Client).'
+                : 'Architectural blueprint for enterprise identity integration (SSO/IAM). Current runtime operates as a secure single-user local client.'}
+            </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.84rem' }}>
               <div style={{ padding: '10px 12px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                 <strong style={{ color: '#0f172a' }}>🛡️ مسؤول النظام (Administrator):</strong>
                 <div style={{ color: '#64748b' }}>إدارة وثائق الكود، تكوين مزودي الذكاء الاصطناعي، ومراقبة سجلات التدقيق.</div>
               </div>
               <div style={{ padding: '10px 12px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                <strong style={{ color: '#0f172a' }}>📐 مهندس استشاري سلامة (Fire Safety Consultant):</strong>
+                <strong style={{ color: '#0f172a' }}>📐 مهندس سلامة ومكافحة حريق (Fire Protection Engineer):</strong>
                 <div style={{ color: '#64748b' }}>إجراء تقييم المشاريع، فحص المخططات، وتوليد مذكرات العرض على الحماية المدنية.</div>
               </div>
               <div style={{ padding: '10px 12px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
@@ -454,15 +470,15 @@ export default function AdminView({ lang }) {
           <div className="card">
             <h3 className="card-title">
               <Lock size={20} color="#dc2626" />
-              {isAr ? 'خصوصية وأمان مستندات العميل' : 'Data Privacy & File Security'}
+              {isAr ? 'خصوصية وأمان مستندات المشروعات' : 'Data Privacy & File Security'}
             </h3>
             <p style={{ fontSize: '0.84rem', color: '#475569', lineHeight: 1.6, marginBottom: '12px' }}>
               {isAr 
-                ? 'يتم الاحتفاظ بملفات المخططات والمسودات الفنية المرفوعة في مساحة العمل الخاصة بالمشروع دون أي تدريب لموديلات عامة أو مشاركة خارج المنشأة المصرح لها.'
-                : 'Customer files and drawings remain strictly private within the workspace and are never used for foundation model training.'}
+                ? 'يتم الاحتفاظ بملفات المخططات والمسودات الفنية المرفوعة في مساحة العمل الخاصة بالمشروع محلياً في متصفحك (Client-side Sandbox) دون أي تدريب لموديلات عامة أو مشاركة خارج جهازك.'
+                : 'Customer files and drawings remain strictly local within your browser workspace and are never shared or used for foundation model training.'}
             </p>
             <div style={{ padding: '12px', background: '#ecfdf5', borderRadius: '6px', border: '1px solid #a7f3d0', fontSize: '0.8rem', color: '#065f46' }}>
-              ✓ {isAr ? 'التشفير وحماية البيانات نشطة محلياً وعلى مستوى المشروع' : 'Enterprise data isolation and encryption active'}
+              ✓ {isAr ? 'عزل البيانات نشط محلياً داخل المتصفح (Client LocalStorage Isolation)' : 'Client-side data isolation active — project files stay in your browser'}
             </div>
           </div>
         </div>

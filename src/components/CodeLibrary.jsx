@@ -112,11 +112,44 @@ export default function CodeLibrary({ lang, onOpenAssistant }) {
   };
   const activeFontSize = fontSizes[fontSizeLevel];
 
-  // Copy handler
+  // Stable, unique key for articles that survives filtering and search
+  const getArticleKey = (chapterId, art, idx) => {
+    if (art?.id) return art.id;
+    const num = (art?.articleNum || '').replace(/\s+/g, '-');
+    const page = art?.page || idx;
+    return `${chapterId || 'ch'}-${num}-${page}`;
+  };
+
+  // Safe clipboard copy handler with fallback
   const handleCopy = (text, id) => {
-    navigator.clipboard.writeText(text);
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(() => {
+          fallbackCopyText(text);
+        });
+      } else {
+        fallbackCopyText(text);
+      }
+    } catch {
+      fallbackCopyText(text);
+    }
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2200);
+  };
+
+  const fallbackCopyText = (text) => {
+    try {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    } catch (err) {
+      console.warn("Fallback copy failed:", err);
+    }
   };
 
   // Bookmark toggle
@@ -144,12 +177,15 @@ export default function CodeLibrary({ lang, onOpenAssistant }) {
     });
   }, [selectedEditionFilter, selectedDocFilter, searchQuery]);
 
-  // Filter articles in current chapter
+  // Filter articles in current chapter using stable articleKey
   const currentArticles = useMemo(() => {
     if (!currentChapter || !currentChapter.articles) return [];
     let list = currentChapter.articles;
     if (showOnlyBookmarks) {
-      list = list.filter((_, idx) => bookmarkedArticleIds.includes(`${currentChapter.id}-${idx}`));
+      list = list.filter((art, idx) => {
+        const key = getArticleKey(currentChapter.id, art, idx);
+        return bookmarkedArticleIds.includes(key);
+      });
     }
     if (chapterFilterQuery.trim()) {
       const q = chapterFilterQuery.toLowerCase();
@@ -349,7 +385,7 @@ export default function CodeLibrary({ lang, onOpenAssistant }) {
       {/* VIEW 1: FULL CODE FREE READER (وضع التصفح الحر الكامل)   */}
       {/* ========================================================= */}
       {activeTab === 'reader' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '20px', alignItems: 'start' }}>
+        <div className="code-library-layout">
           
           {/* RIGHT SIDEBAR: VOLUMES & CHAPTERS TREE NAVIGATOR */}
           <div style={{
@@ -724,12 +760,12 @@ export default function CodeLibrary({ lang, onOpenAssistant }) {
                 </div>
               ) : (
                 currentArticles.map((art, idx) => {
-                  const articleKey = `${currentChapter?.id}-${idx}`;
+                  const articleKey = getArticleKey(currentChapter?.id, art, idx);
                   const isBookmarked = bookmarkedArticleIds.includes(articleKey);
                   return (
                     <div 
-                      key={idx}
-                      id={`article-${idx}`}
+                      key={articleKey}
+                      id={`article-${articleKey}`}
                       style={{
                         background: '#ffffff',
                         borderRadius: '16px',

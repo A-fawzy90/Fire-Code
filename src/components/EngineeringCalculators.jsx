@@ -190,6 +190,7 @@ export default function EngineeringCalculators({ lang, selectedProject, onOpenAs
   const [doorWidthMeters, setDoorWidthMeters] = useState(1.0);
   const [doorHeightMeters, setDoorHeightMeters] = useState(2.1);
   const [injectionType, setInjectionType] = useState('multiple'); // 'single' | 'multiple'
+  const [basementArea, setBasementArea] = useState(selectedProject?.facts?.floorArea || 1200);
 
   const smokeResults = useMemo(() => {
     // Egyptian Fire Code 305/1 & 305/3:
@@ -201,14 +202,21 @@ export default function EngineeringCalculators({ lang, selectedProject, onOpenAs
     const targetDoorVelocityMps = 1.0; 
 
     // Airflow through open doors: Q_doors = N_doors * Area * Velocity
-    const singleDoorAreaM2 = doorWidthMeters * doorHeightMeters;
-    const totalOpenDoorAreaM2 = numOpenDoors * singleDoorAreaM2;
+    const safeDoorW = Math.max(0.8, doorWidthMeters || 1.0);
+    const safeDoorH = Math.max(1.8, doorHeightMeters || 2.1);
+    const safeNumOpen = Math.max(1, numOpenDoors || 2);
+    const safeStories = Math.max(2, numStories || 7);
+    const safeStoryH = Math.max(2.5, storyHeightMeters || 3.2);
+    const totalStairHeight = Math.round(safeStories * safeStoryH * 10) / 10;
+
+    const singleDoorAreaM2 = safeDoorW * safeDoorH;
+    const totalOpenDoorAreaM2 = safeNumOpen * singleDoorAreaM2;
     const flowThroughDoorsM3s = totalOpenDoorAreaM2 * targetDoorVelocityMps; // m3/s
     const flowThroughDoorsCfm = flowThroughDoorsM3s * 2118.88;
 
     // Air leakage through closed doors & building envelope:
     // Each closed stair door leaks approx 150 - 250 CFM @ 50 Pa with standard seals
-    const numClosedDoors = Math.max(0, numStories - numOpenDoors);
+    const numClosedDoors = Math.max(0, safeStories - safeNumOpen);
     const leakagePerDoorCfm = 180;
     const totalClosedDoorsLeakageCfm = numClosedDoors * leakagePerDoorCfm;
 
@@ -218,8 +226,14 @@ export default function EngineeringCalculators({ lang, selectedProject, onOpenAs
     const totalFanCapacityCfm = Math.round(subtotalCfm * safetyFactor);
     const totalFanCapacityM3h = Math.round(totalFanCapacityCfm * 1.69901);
 
-    // Fan static pressure required (50 Pa stairwell + approx 150-250 Pa ductwork & dampers)
-    const fanStaticPressurePa = Math.round(designDeltaP + 200);
+    // Dynamic Fan static pressure:
+    // In multiple injection shafts: balanced ductwork (~180 Pa duct loss + 50 Pa deltaP = 230 Pa)
+    // In single injection points: stack effect and friction require higher head (~260 Pa duct loss + 50 Pa deltaP = 310 Pa)
+    const ductFrictionPa = injectionType === 'single' ? 260 : 180;
+    const fanStaticPressurePa = Math.round(designDeltaP + ductFrictionPa);
+
+    // Code recommendation check: single injection is only suitable for <= 15m (approx 4-5 floors)
+    const singleInjectionWarning = injectionType === 'single' && totalStairHeight > 15;
 
     // Fan Motor kW estimation: (CFM * SP in inches w.g.) / (6356 * fanEff)
     const spInchesWater = fanStaticPressurePa / 249.0889;
@@ -228,14 +242,16 @@ export default function EngineeringCalculators({ lang, selectedProject, onOpenAs
     const fanMotorKw = Math.round(fanMotorHP * 0.746 * 10) / 10;
 
     // Basement Parking Smoke Exhaust requirement (10 Air Changes per Hour - ACH)
-    const basementAreaM2 = floorArea || 1200;
-    const basementVolumeM3 = basementAreaM2 * 3.0; // 3m clear height
+    const safeBasementArea = Math.max(50, basementArea || 1200);
+    const basementVolumeM3 = safeBasementArea * 3.0; // 3m clear height
     const smokeExhaustM3h = Math.round(basementVolumeM3 * 10);
     const smokeExhaustCfm = Math.round(smokeExhaustM3h / 1.69901);
 
     return {
       designDeltaP,
       targetDoorVelocityMps,
+      totalStairHeight,
+      singleInjectionWarning,
       totalOpenDoorAreaM2: totalOpenDoorAreaM2.toFixed(2),
       flowThroughDoorsCfm: Math.round(flowThroughDoorsCfm),
       totalClosedDoorsLeakageCfm: Math.round(totalClosedDoorsLeakageCfm),
@@ -247,7 +263,7 @@ export default function EngineeringCalculators({ lang, selectedProject, onOpenAs
       smokeExhaustCfm,
       smokeExhaustM3h
     };
-  }, [numStories, storyHeightMeters, numOpenDoors, doorWidthMeters, doorHeightMeters, injectionType, floorArea]);
+  }, [numStories, storyHeightMeters, numOpenDoors, doorWidthMeters, doorHeightMeters, injectionType, basementArea]);
 
   // Copy Calculation Sheet formatted for Egyptian official records
   const handleCopyNote = () => {
@@ -324,9 +340,34 @@ export default function EngineeringCalculators({ lang, selectedProject, onOpenAs
 `;
     }
 
-    navigator.clipboard.writeText(noteText);
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(noteText).catch(() => {
+          fallbackCopyText(noteText);
+        });
+      } else {
+        fallbackCopyText(noteText);
+      }
+    } catch {
+      fallbackCopyText(noteText);
+    }
     setCopiedNote(true);
     setTimeout(() => setCopiedNote(false), 2500);
+  };
+
+  const fallbackCopyText = (text) => {
+    try {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    } catch (e) {
+      console.warn("Fallback copy failed", e);
+    }
   };
 
   // Sync inputs from active project if available
@@ -1137,6 +1178,35 @@ export default function EngineeringCalculators({ lang, selectedProject, onOpenAs
                 <option value="single">{isAr ? 'حقن نقطي مباشر في أعلى أو أسفل السلم (للمباني الصغيرة ≤ ٤ أدوار)' : 'Single Injection (Small buildings ≤ 4 floors)'}</option>
               </select>
             </div>
+
+            {/* Dedicated Basement Garage Floor Area Input */}
+            <div>
+              <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>
+                {isAr ? 'مسطح بدروم الجراج لسحب الدخان (م²):' : 'Basement Garage Floor Area (m²):'}
+              </label>
+              <input 
+                type="number" 
+                value={basementArea}
+                onChange={(e) => setBasementArea(Math.max(50, Number(e.target.value) || 0))}
+                min={50}
+                max={50000}
+                step={50}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.86rem' }}
+              />
+              <span style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                {isAr ? '* الكود المصري يشترط ١٠ مرات تغيير هواء/ساعة لجراجات السيارات مع استقلالية تامة عن حسابات الخزان.' : '* 10 ACH exhaust required by Code 305/2, calculated independently from tank area.'}
+              </span>
+            </div>
+
+            {/* Single injection warning if height > 15m */}
+            {smokeResults.singleInjectionWarning && (
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '10px 12px', fontSize: '0.78rem', color: '#991b1b', lineHeight: 1.5 }}>
+                ⚠️ <strong>{isAr ? 'تنبيه كودي (كود ٣٠٥/١ و ٣٠٥/٣): ' : 'Code Advisory: '}</strong>
+                {isAr 
+                  ? `ارتفاع السلم الإجمالي (${smokeResults.totalStairHeight} م) يتجاوز ١٥ متراً. يُلزم الكود باستخدام نظام الحقن المتعدد (Multiple Injection) لتفادي اختلال توزيع الضغط وانهياره بالأدوار العليا.`
+                  : `Stair height (${smokeResults.totalStairHeight}m) exceeds 15m. Multiple injection points required by code to prevent pressure drop on upper floors.`}
+              </div>
+            )}
           </div>
 
           {/* Results Column with Pressurization Schematic */}

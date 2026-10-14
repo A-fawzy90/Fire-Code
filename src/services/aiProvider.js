@@ -230,16 +230,31 @@ export async function askCodeAssistant(query, projectContext = null, providerId 
   const qNorm = normalizeArabic(query);
   const qTokens = qNorm.split(' ').filter(t => t.length > 1 && !ARABIC_STOP_WORDS.has(t));
 
-  // 1. Check for specific conceptual topic match
+  // 1. Score and find the best conceptual topic match (highest score wins)
   let matchedConcept = null;
+  let bestConceptScore = 0;
+
   for (const concept of CONCEPT_MAPPINGS) {
-    const isKeywordMatch = concept.keywords.some(kw => {
+    let conceptScore = 0;
+    for (const kw of concept.keywords) {
       const normKw = normalizeArabic(kw);
-      return qNorm.includes(normKw) || qTokens.some(tok => normKw.includes(tok) && tok.length > 2);
-    });
-    if (isKeywordMatch) {
+      if (qNorm === normKw) {
+        conceptScore += 60; // exact phrase match
+      } else if (qNorm.includes(normKw)) {
+        conceptScore += 35; // contained phrase match
+      } else {
+        // Individual token matching: token must match a full word in keyword or have length >= 3
+        const kwTokens = normKw.split(' ');
+        for (const tok of qTokens) {
+          if (tok.length >= 3 && kwTokens.includes(tok)) {
+            conceptScore += 15;
+          }
+        }
+      }
+    }
+    if (conceptScore > bestConceptScore && conceptScore >= 20) {
+      bestConceptScore = conceptScore;
       matchedConcept = concept;
-      break;
     }
   }
 
@@ -284,7 +299,7 @@ export async function askCodeAssistant(query, projectContext = null, providerId 
       matchedProvisionsCount: 0,
       citation: null,
       exactSourceText: "لم يتم العثور على بند مباشر يتطابق حرفياً مع السؤال المدخل في بنود الكود المستخرجة حالياً الصادرة بقرار وزير الإسكان رقم ٢٥٥ لسنة ٢٠٢٦.",
-      plainExplanation: "حرصاً على الدقة ومنع أي ردود خاطئة (Zero Hallucination)، تم فحص الأجزاء الثلاثة للكود (٣٠٥/١ الإنشائي، ٣٠٥/٢ الميكانيكي، ٣٠٥/٣ الكهربائي والإنذار). يرجى تحديد الاستفسار باستخدام أحد المصطلحات الهندسية الشائعة مثل: 'اشتراطات غرف المحول'، 'مسافات الارتحال'، 'شبكات الرشاشات المائية'، 'عزل البدروم وسحب الدخان'، 'سلالم الهروب ومخارج الطوارئ'، أو 'طفايات الحريق اليدوية'.",
+      plainExplanation: "حرصاً على الأمانة الهندسية وتجنب التخمين غير المعتمد، تم فحص الأجزاء الثلاثة للكود (٣٠٥/١ الإنشائي، ٣٠٥/٢ الميكانيكي، ٣٠٥/٣ الكهربائي والإنذار) بالاعتماد على الاسترجاع المباشر للنصوص. يرجى تحديد الاستفسار باستخدام أحد المصطلحات الهندسية الشائعة مثل: 'اشتراطات غرف المحول'، 'مسافات الارتحال'، 'شبكات الرشاشات المائية'، 'عزل البدروم وسحب الدخان'، 'سلالم الهروب ومخارج الطوارئ'، أو 'طفايات الحريق اليدوية'.",
       aiAssessment: isGeneralMode
         ? "استعلام عام: المساعد متصل بنصوص الكود المصري العام (كود ٣٠٥ والقرار ٢٥٥ لسنة ٢٠٢٦) لكافة أنواع المنشآت."
         : "المساعد متصل حصراً بنصوص الكود المصري المعتمدة ولا يقوم بتأليف أو اختلاق نصوص غير واردة بالقرار ٢٥٥ لسنة ٢٠٢٦.",

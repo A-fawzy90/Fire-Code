@@ -130,13 +130,24 @@ export default function FirebaseSyncModal({
         
         if (!confirmMerge) return;
 
-        // Safe Merge Strategy: Combine existing projects with cloud projects by ID
+        // Safe Merge Strategy: Combine existing projects with cloud projects by ID with strict schema validation
         const mergedMap = new Map();
-        (projects || []).forEach(p => mergedMap.set(String(p.id), p));
+        (projects || []).forEach(p => {
+          if (p && p.id) mergedMap.set(String(p.id), p);
+        });
         cloudProjects.forEach(cp => {
-          const key = String(cp.id);
+          if (!cp || typeof cp !== 'object') return;
+          const key = String(cp.id || `proj-cloud-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`);
           const existing = mergedMap.get(key) || {};
-          mergedMap.set(key, { ...existing, ...cp });
+          mergedMap.set(key, {
+            ...existing,
+            ...cp,
+            id: key,
+            name: typeof cp.name === 'string' && cp.name.trim() ? cp.name : (existing.name || 'مشروع سحابي بدون عنوان'),
+            occupancyType: cp.occupancyType || existing.occupancyType || 'commercial',
+            status: cp.status || existing.status || 'pending_review',
+            facts: (typeof cp.facts === 'object' && cp.facts !== null) ? { ...(existing.facts || {}), ...cp.facts } : (existing.facts || {})
+          });
         });
 
         const mergedList = Array.from(mergedMap.values());
@@ -175,12 +186,36 @@ service cloud.firestore {
     }
   }
 }`;
+    const fallbackCopy = () => {
+      try {
+        const textArea = document.createElement("textarea");
+        textArea.value = rules;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        textArea.remove();
+        setCopiedRules(true);
+        setTimeout(() => setCopiedRules(false), 3000);
+      } catch (err) {
+        console.warn('Fallback copy error:', err);
+      }
+    };
+
     try {
-      navigator.clipboard.writeText(rules);
-      setCopiedRules(true);
-      setTimeout(() => setCopiedRules(false), 3000);
-    } catch (e) {
-      console.warn('Clipboard write error:', e);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(rules).then(() => {
+          setCopiedRules(true);
+          setTimeout(() => setCopiedRules(false), 3000);
+        }).catch(() => fallbackCopy());
+      } else {
+        fallbackCopy();
+      }
+    } catch {
+      fallbackCopy();
     }
   };
 

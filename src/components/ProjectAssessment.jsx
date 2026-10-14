@@ -134,6 +134,36 @@ export default function ProjectAssessment({
     }
   }, [initialQuery]);
 
+  // Synchronize form and re-run assessment when selectedProject changes
+  useEffect(() => {
+    if (selectedProject) {
+      const desc = selectedProject.descriptionAr || selectedProject.name || '';
+      setDescriptionInput(desc);
+      const newForm = {
+        occupancyType: selectedProject.facts?.occupancyType || 'commercial',
+        subgroupCode: selectedProject.facts?.subgroupCode || selectedProject.facts?.occupancySubgroup || 'هـ-١',
+        aboveGroundFloors: selectedProject.facts?.aboveGroundFloors || 6,
+        basementFloors: selectedProject.facts?.basementFloors !== undefined ? selectedProject.facts.basementFloors : 1,
+        basementUse: selectedProject.facts?.basementUse || 'parking',
+        floorArea: Number(selectedProject.facts?.floorArea) || 1200,
+        buildingHeight: Number(selectedProject.facts?.buildingHeight) || 24,
+        occupantLoad: selectedProject.facts?.occupantLoadEstimated || 1400,
+        hasSprinklers: 'proposed',
+        location: selectedProject.facts?.location || (isAr ? 'القاهرة الجديدة' : 'New Cairo')
+      };
+      setFormData(newForm);
+      if (desc) {
+        runAssessment(desc);
+      } else {
+        const res = assessProjectAgainstCode({
+          ...selectedProject.facts,
+          ...newForm
+        });
+        setAssessmentResult(res);
+      }
+    }
+  }, [selectedProject?.id]);
+
   const handleDescriptionSubmit = (e) => {
     e.preventDefault();
     runAssessment(descriptionInput);

@@ -36,34 +36,75 @@ export default function ReportsView({ lang, selectedProject }) {
   };
 
   const handleDownloadDocx = () => {
-    // Generate text/docx simulation file
-    const content = `
-جمهورية مصر العربية
-وزارة الإسكان والمرافق والمجتمعات العمرانية
-الإدارة العامة للحماية المدنية
+    // Generate valid Microsoft Word HTML formatted document (.doc)
+    const wordContent = `
+<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head>
+<meta charset='utf-8'>
+<title>${project.titleAr}</title>
+<style>
+  body { font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; text-align: right; margin: 40px; color: #0f172a; line-height: 1.6; }
+  h1 { color: #b91c1c; font-size: 18pt; border-bottom: 2px solid #b91c1c; padding-bottom: 8px; text-align: center; }
+  h2 { color: #1e293b; font-size: 14pt; margin-top: 24px; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 11pt; }
+  th, td { border: 1px solid #cbd5e1; padding: 10px 14px; text-align: right; }
+  th { background-color: #f1f5f9; color: #1e293b; }
+  .alert { background-color: #fef2f2; border: 1px solid #f87171; color: #991b1b; padding: 12px; font-weight: bold; text-align: center; margin: 20px 0; border-radius: 6px; }
+  .footer { margin-top: 40px; font-size: 10pt; color: #64748b; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 12px; }
+</style>
+</head>
+<body dir="rtl">
+  <h1>مذكرة فنية استرشادية لمطابقة كود الحريق المصري</h1>
+  <p style="text-align: center; font-size: 12pt; color: #475569;">وفق متطلبات قرار وزير الإسكان والمرافق رقم ٢٥٥ لسنة ٢٠٢٦</p>
+  
+  <div class="alert">
+    ⚠️ مسودة فنية استرشادية للعرض والمناقشة — تتطلب مراجعة واعتماد الإدارة العامة للحماية المدنية
+  </div>
 
-مذكرة فنية للعرض والمناقشة
-بشأن دراسة مطابقة اشتراطات الكود المصري لحماية المنشآت من أخطار الحريق
-(القرار الوزاري رقم ٢٥٥ لسنة ٢٠٢٦)
+  <h2>أولاً: بيانات المشروع</h2>
+  <table>
+    <tr><th width="30%">اسم المشروع</th><td>${project.titleAr}</td></tr>
+    <tr><th>الموقع العام</th><td>${project.facts.location || 'غير محدد'}</td></tr>
+    <tr><th>التصنيف الكودي</th><td>${project.facts.subgroupNameAr || 'إشغال عام'}</td></tr>
+    <tr><th>الارتفاع وعدد الطوابق</th><td>ارتفاع المبنى: ${project.facts.buildingHeight} متراً (${project.facts.totalFloors} طوابق)</td></tr>
+    <tr><th>المساحة</th><td>مساحة الدور: ${project.facts.floorArea} م² • إجمالي المساحة: ${project.facts.totalArea} م²</td></tr>
+  </table>
 
-اسم المشروع: ${project.titleAr}
-الموقع: ${project.facts.location}
-التصنيف الكودي: ${project.facts.subgroupNameAr}
-الارتفاع الكلي: ${project.facts.buildingHeight} متراً
-المساحة الإجمالية: ${project.facts.totalArea} م²
+  <h2>ثانياً: الاشتراطات الفنية المطبقة</h2>
+  <table>
+    <tr><th>المجال الهندسي</th><th>الاشتراط الكودي والمتطلب الإلزامي</th><th>المرجع بالكود المصري</th></tr>
+    <tr>
+      <td>الارتفاع والسلامة</td>
+      <td>${Number(project.facts.buildingHeight) > 22 ? 'تطبيق اشتراطات المباني المرتفعة: شبكة رشاشات مائية شاملة، مصعد إطفاء، سلالم مضغوطة.' : 'منشأة منخفضة / متوسطة الارتفاع، استيفاء اشتراطات الهروب والتهوية الطبيعية.'}</td>
+      <td>كود ٣٠٥/١ - الباب الخامس</td>
+    </tr>
+    <tr>
+      <td>أدوار البدروم</td>
+      <td>${Number(project.facts.basementFloors) > 0 ? `فصل حريقي ساعتين، سحب دخان ميكانيكي بمعدل ${project.facts.basementUse === 'parking' ? '١٠' : '٦'} مرات/ساعة، فصل السلالم بمخرج مباشر.` : 'المبنى بدون بدروم (إعفاء من سحب دخان البدرومات).'}</td>
+      <td>كود ٣٠٥/١ - الباب الخامس ص ٥-١٠</td>
+    </tr>
+    <tr>
+      <td>مسالك الهروب</td>
+      <td>معامل سعة السلالم ٧٫٦ مم/شخص و ٥٫٠ مم للأبواب (ينخفض إلى ٥٫٠ مم و ٣٫٨ مم مع الرشاشات التلقائية).</td>
+      <td>كود ٣٠٥/١ - الباب الرابع ص ٤-١٢</td>
+    </tr>
+  </table>
 
-الحالة: مسودة للمناقشة الفنية - تتطلب اعتماد إدارة الحماية المدنية
-تم الإعداد والتدقيق بواسطة: منظومة مساعد كود الحريق المصري (إصدار ٢٠٢٦)
-تصميم وبرمجة: المهندس / أحمد فوزي (جميع الحقوق محفوظة © ٢٠٢٦)
+  <div class="footer">
+    تم الإعداد بواسطة: منظومة مساعد كود الحريق المصري (إصدار ٢٠٢٦)<br>
+    تصميم وتطوير: المهندس / أحمد فوزي — مهندس أنظمة مكافحة وإنذار الحريق ومصمم البرنامج
+  </div>
+</body>
+</html>
     `;
 
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const blob = new Blob(['\ufeff' + wordContent], { type: 'application/msword;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Technical_Memorandum_Civil_Protection_${Date.now()}.docx`;
+    a.download = `Technical_Memorandum_Fire_Code_${Date.now()}.doc`;
     a.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
   };
 
   return (
@@ -97,7 +138,7 @@ export default function ReportsView({ lang, selectedProject }) {
             style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <Download size={16} />
-            {isAr ? 'تحميل بصيغة DOCX' : 'Download DOCX'}
+            {isAr ? 'تحميل كملف Word (.doc)' : 'Download Word Doc (.doc)'}
           </button>
         </div>
       </div>

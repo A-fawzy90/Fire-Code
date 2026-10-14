@@ -8,6 +8,7 @@ import IssueWorkspace from './components/IssueWorkspace';
 import ReportsView from './components/ReportsView';
 import AdminView from './components/AdminView';
 import FloatingAssistant from './components/FloatingAssistant';
+import SplashScreen from './components/SplashScreen';
 
 // Resilient Error Boundary to ensure tabs never freeze
 class TabErrorBoundary extends React.Component {
@@ -87,6 +88,13 @@ export default function App() {
   const [initialAssessmentQuery, setInitialAssessmentQuery] = useState('');
   const [isAiDrawerOpen, setIsAiDrawerOpen] = useState(false);
   const [assistantInitialQuery, setAssistantInitialQuery] = useState('');
+  const [isSplashOpen, setIsSplashOpen] = useState(() => {
+    try {
+      return localStorage.getItem('hideFireCodeSplash') !== 'true';
+    } catch {
+      return true;
+    }
+  });
 
   const handleOpenAssistantWithQuery = (queryText) => {
     setAssistantInitialQuery(queryText);
@@ -292,6 +300,7 @@ export default function App() {
         selectedProject={selectedProject}
         sampleProjects={projects}
         onSelectProject={handleSelectProject}
+        onOpenSplash={() => setIsSplashOpen(true)}
       />
 
       {/* Main Content View Switcher wrapped in TabErrorBoundary */}
@@ -368,20 +377,97 @@ export default function App() {
         initialQuery={assistantInitialQuery}
       />
 
-      {/* Footer */}
+      {/* Enhanced Footer with Eng. Ahmed Fawzy Credentials & Fire Triangle */}
       <footer style={{
         marginTop: 'auto',
-        background: '#0f172a',
+        background: '#090d16',
         color: '#94a3b8',
-        borderTop: '1px solid #1e293b',
-        padding: '24px',
+        borderTop: '1px solid rgba(245, 158, 11, 0.25)',
+        padding: '28px 24px',
         fontSize: '0.82rem',
         textAlign: 'center'
       }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {/* Main Engineer Attribution Bar */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '12px',
+            background: 'rgba(30, 41, 59, 0.5)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            padding: '12px 20px',
+            borderRadius: '14px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{
+                background: 'linear-gradient(135deg, #ef4444, #f59e0b)',
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1rem',
+                boxShadow: '0 0 12px rgba(239, 68, 68, 0.4)'
+              }}>
+                🔥
+              </div>
+              <div style={{ textAlign: lang === 'ar' ? 'right' : 'left' }}>
+                <div style={{ color: '#fed7aa', fontWeight: 800, fontSize: '0.9rem' }}>
+                  {lang === 'ar' ? 'تصميم وتطوير: المهندس / أحمد فوزي' : 'Designed & Engineered by Eng. Ahmed Fawzy'}
+                </div>
+                <div style={{ color: '#94a3b8', fontSize: '0.74rem' }}>
+                  {lang === 'ar' 
+                    ? 'استشاري هندسة السلامة ومكافحة الحريق والأنظمة الكودية' 
+                    : 'Fire Protection & Life Safety Engineering Consultant'}
+                </div>
+              </div>
+            </div>
+
+            {/* Button to open Intro / Fire Triangle Splash */}
+            <button
+              type="button"
+              onClick={() => setIsSplashOpen(true)}
+              style={{
+                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(245, 158, 11, 0.2))',
+                border: '1px solid #f59e0b',
+                color: '#fef08a',
+                padding: '8px 16px',
+                borderRadius: '999px',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              title={lang === 'ar' ? 'استعراض شعار مثلث الحريق وبطاقة المهندس المصمم' : 'View Fire Triangle & Designer Card'}
+            >
+              <span>🔥</span>
+              <span>{lang === 'ar' ? 'شعار مثلث الحريق وبطاقة الاعتماد' : 'Fire Triangle & Credentials'}</span>
+            </button>
+
+            {/* Copyright badge */}
+            <div style={{
+              fontSize: '0.78rem',
+              color: '#cbd5e1',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}>
+              <span style={{ color: '#22c55e' }}>✔</span>
+              <span>{lang === 'ar' ? 'جميع الحقوق محفوظة © ٢٠٢٦ المهندس أحمد فوزي' : 'All Rights Reserved © 2026 Eng. Ahmed Fawzy'}</span>
+            </div>
+          </div>
+
+          {/* Reference standards */}
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', flexWrap: 'wrap', color: '#94a3b8', fontSize: '0.78rem' }}>
             <span style={{ color: '#f8fafc', fontWeight: '700' }}>
-              {lang === 'ar' ? 'مساعد كود الحريق المصري (إصدار ٢٠٢٦)' : 'Egyptian Fire Code Assistant (2026 Edition)'}
+              {lang === 'ar' ? 'الكود المصري لحماية المنشآت من أخطار الحريق (كود ٣٠٥)' : 'Egyptian Fire Code 305'}
             </span>
             <span>•</span>
             <span>
@@ -391,14 +477,26 @@ export default function App() {
             <span>
               {lang === 'ar' ? 'المركز القومي لبحوث الإسكان والبناء (HBRC)' : 'Housing and Building National Research Center'}
             </span>
+            <span>•</span>
+            <span>
+              {lang === 'ar' ? 'الإدارة العامة للحماية المدنية' : 'General Administration of Civil Protection'}
+            </span>
           </div>
-          <p style={{ color: '#64748b', fontSize: '0.76rem', maxWidth: '900px', margin: '0 auto' }}>
+
+          <p style={{ color: '#64748b', fontSize: '0.74rem', maxWidth: '960px', margin: '0 auto', lineHeight: 1.5 }}>
             {lang === 'ar' 
-              ? 'تنبيه قانوني ومهني: المنظومة مخصصة لتمكين الاستشاريين والمهندسين من فحص وتدقيق المعايير الهندسية. القرارات والاعتمادات النهائية تظل اختصاصاً حصرياً للإدارة العامة للحماية المدنية بوزارة الداخلية واللجان الفنية المختصة.'
+              ? 'تنبيه قانوني ومهني: المنظومة مخصصة لتمكين الاستشاريين والمهندسين من فحص وتدقيق المعايير الهندسية والحسابية. القرارات والاعتمادات النهائية تظل اختصاصاً حصرياً للإدارة العامة للحماية المدنية بوزارة الداخلية واللجان الفنية المختصة.'
               : 'Legal Notice: This system assists consultants and engineers in verifying code requirements. Final approval remains under the sole authority of the General Administration of Civil Protection and competent statutory committees.'}
           </p>
         </div>
       </footer>
+
+      {/* Cinematic Splash Screen with Fire Triangle & Eng. Ahmed Fawzy Credentials */}
+      <SplashScreen 
+        isOpen={isSplashOpen} 
+        onClose={() => setIsSplashOpen(false)} 
+        lang={lang} 
+      />
     </div>
   );
 }

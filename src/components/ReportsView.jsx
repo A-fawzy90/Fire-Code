@@ -52,6 +52,8 @@ export default function ReportsView({ lang, selectedProject }) {
 المساحة الإجمالية: ${project.facts.totalArea} م²
 
 الحالة: مسودة للمناقشة الفنية - تتطلب اعتماد إدارة الحماية المدنية
+تم الإعداد والتدقيق بواسطة: منظومة مساعد كود الحريق المصري (إصدار ٢٠٢٦)
+تصميم وبرمجة: المهندس / أحمد فوزي (جميع الحقوق محفوظة © ٢٠٢٦)
     `;
 
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
@@ -280,6 +282,27 @@ export default function ReportsView({ lang, selectedProject }) {
                 {isAr ? 'خاتم الحماية المدنية' : 'Official Stamp'}
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* System & Designer Attribution Strip */}
+        <div style={{
+          marginTop: '20px',
+          paddingTop: '12px',
+          borderTop: '1px solid #e2e8f0',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontSize: '0.72rem',
+          color: '#64748b'
+        }}>
+          <div>
+            <span>🔥 {isAr ? 'منظومة مساعد كود الحريق المصري (كود ٣٠٥ والقرار ٢٥٥ / ٢٠٢٦)' : 'Egyptian Fire Code Assistant Suite'}</span>
+            <span style={{ margin: '0 6px' }}>•</span>
+            <strong style={{ color: '#0f172a' }}>{isAr ? 'تصميم وبرمجة: المهندس / أحمد فوزي' : 'Designed & Engineered by Eng. Ahmed Fawzy'}</strong>
+          </div>
+          <div>
+            <span>{isAr ? 'جميع الحقوق محفوظة © ٢٠٢٦' : 'All Rights Reserved © 2026'}</span>
           </div>
         </div>
 

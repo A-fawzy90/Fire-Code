@@ -20,7 +20,8 @@ export default function Navbar({
   setLang, 
   selectedProject, 
   sampleProjects, 
-  onSelectProject 
+  onSelectProject,
+  onOpenSplash
 }) {
   const isAr = lang === 'ar';
 
@@ -56,6 +57,29 @@ export default function Navbar({
               <strong>{isAr ? selectedProject.titleAr : selectedProject.titleEn}</strong>
             </div>
           )}
+          <button 
+            type="button"
+            onClick={onOpenSplash}
+            style={{
+              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(245, 158, 11, 0.2))',
+              border: '1px solid rgba(245, 158, 11, 0.4)',
+              color: '#fef08a',
+              borderRadius: '999px',
+              padding: '3px 12px',
+              fontSize: '0.78rem',
+              fontWeight: 800,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+            title={isAr ? 'عرض افتتاحية البرنامج ومثلث الحريق وحقوق المهندس أحمد فوزي' : 'View Fire Triangle & Eng. Ahmed Fawzy Credits'}
+          >
+            <span>🔥</span>
+            <span>{isAr ? 'مثلث الحريق | م. أحمد فوزي' : 'Fire Triangle | Eng. Ahmed Fawzy'}</span>
+          </button>
+
           <button 
             className="lang-toggle-btn"
             onClick={() => setLang(isAr ? 'en' : 'ar')}

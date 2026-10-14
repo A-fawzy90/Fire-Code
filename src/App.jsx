@@ -451,30 +451,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Button to open Intro / Fire Triangle Splash */}
-            <button
-              type="button"
-              onClick={() => setIsSplashOpen(true)}
-              style={{
-                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(245, 158, 11, 0.2))',
-                border: '1px solid #f59e0b',
-                color: '#fef08a',
-                padding: '8px 16px',
-                borderRadius: '999px',
-                fontSize: '0.8rem',
-                fontWeight: 700,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-              title={lang === 'ar' ? 'استعراض شعار مثلث الحريق وبطاقة المهندس المصمم' : 'View Fire Triangle & Designer Card'}
-            >
-              <span>🔥</span>
-              <span>{lang === 'ar' ? 'شعار مثلث الحريق وبطاقة الاعتماد' : 'Fire Triangle & Credentials'}</span>
-            </button>
-
             {/* Copyright badge */}
             <div style={{
               fontSize: '0.78rem',

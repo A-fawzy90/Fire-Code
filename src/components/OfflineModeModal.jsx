@@ -52,7 +52,7 @@ export default function OfflineModeModal({
       titleAr: 'فحص وتقييم المشاريع والارتفاعات',
       titleEn: 'Project Assessment & Height Verification',
       descAr: 'تحديد اشتراطات الارتفاع، مسالك الهروب، وحسابات حمولة الإشغال ومسافات الارتحال تعمل بمحرك خوارزمي محلي سريع.',
-      descEn: 'Evaluate building heights (16m / 22m / 24m thresholds), travel distances, and occupant loads via high-speed client-side algorithms.'
+      descEn: 'Evaluate building heights (16m residential / 22m non-residential thresholds), travel distances, and occupant loads via high-speed client-side algorithms.'
     },
     {
       icon: HardDrive,

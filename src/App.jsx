@@ -283,16 +283,38 @@ export default function App() {
 
   // Handle facts applied from Drawing Review
   const handleApplyExtractedFacts = (extractedFacts) => {
-    if (!selectedProjectId) return;
+    if (!selectedProjectId || !extractedFacts) return;
+
+    // Helper to safely extract clean numbers from strings with units or Arabic numerals
+    const parseNumeric = (val) => {
+      if (typeof val === 'number') return isNaN(val) ? undefined : val;
+      if (!val) return undefined;
+      const arabicDigits = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+      const normalized = String(val).replace(/[٠-٩]/g, d => arabicDigits.indexOf(d)).replace(/[^\d.]/g, '');
+      const parsed = parseFloat(normalized);
+      return !isNaN(parsed) && parsed > 0 ? parsed : undefined;
+    };
+
+    const numericFloorArea = parseNumeric(extractedFacts.floorArea) || parseNumeric(extractedFacts.floorAreaDetected);
+    const numericStairWidth = parseNumeric(extractedFacts.stairWidth) || parseNumeric(extractedFacts.stairWidthValue);
+    const numericDoorWidth = parseNumeric(extractedFacts.doorWidth) || parseNumeric(extractedFacts.doorWidthValue);
+    const numericTravelDist = parseNumeric(extractedFacts.travelDistance) || parseNumeric(extractedFacts.travelDistValue);
+    const numericBuildingHeight = parseNumeric(extractedFacts.buildingHeight);
+    const numericTotalArea = parseNumeric(extractedFacts.totalArea);
+    const numericTotalFloors = parseNumeric(extractedFacts.totalFloors) || parseNumeric(extractedFacts.aboveGroundFloors);
+
     setProjects(prev => prev.map(p => {
       if (p.id === selectedProjectId) {
         const updatedFacts = {
           ...p.facts,
           ...extractedFacts,
-          floorArea: extractedFacts.floorArea || p.facts?.floorArea,
-          stairWidth: extractedFacts.stairWidth || p.facts?.stairWidth,
-          doorWidth: extractedFacts.doorWidth || p.facts?.doorWidth,
-          travelDistance: extractedFacts.travelDistance || p.facts?.travelDistance
+          floorArea: numericFloorArea !== undefined ? numericFloorArea : p.facts?.floorArea,
+          stairWidth: numericStairWidth !== undefined ? numericStairWidth : p.facts?.stairWidth,
+          doorWidth: numericDoorWidth !== undefined ? numericDoorWidth : p.facts?.doorWidth,
+          travelDistance: numericTravelDist !== undefined ? numericTravelDist : p.facts?.travelDistance,
+          buildingHeight: numericBuildingHeight !== undefined ? numericBuildingHeight : p.facts?.buildingHeight,
+          totalArea: numericTotalArea !== undefined ? numericTotalArea : p.facts?.totalArea,
+          totalFloors: numericTotalFloors !== undefined ? numericTotalFloors : p.facts?.totalFloors,
         };
         return {
           ...p,

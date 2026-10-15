@@ -1,12 +1,12 @@
 # كود مشروع مساعد كود الحريق المصري بالكامل في ملف واحد
 
 > تصميم وتطوير: المهندس / أحمد فوزي - مهندس أنظمة مكافحة وإنذار الحريق
-> يتضمن الكود المصدري الكامل لجميع الملفات والمكونات والخدمات الهندسية ومكتبة أخطاء الرفض ونظام العمل الميداني بدون إنترنت (Offline PWA).
+> يتضمن الكود المصدري الكامل لجميع الملفات والمكونات والخدمات الهندسية ومكتبة أخطاء الرفض ونظام العمل الميداني بدون إنترنت (Offline PWA) ونظام الصلاحيات المزدوج (واجهة الزوار العامة وواجهة الإدارة والتحكم).
 
 ================================================================================
 📁 ملف: package.json
 ================================================================================
-```json
+`json
 {
   "name": "egyptian-fire-code-assistant",
   "private": true,
@@ -34,12 +34,12 @@
   }
 }
 
-```
+`
 
 ================================================================================
 📁 ملف: vite.config.js
 ================================================================================
-```javascript
+`javascript
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { viteSingleFile } from 'vite-plugin-singlefile'
@@ -61,12 +61,12 @@ export default defineConfig({
 })
 
 
-```
+`
 
 ================================================================================
 📁 ملف: public/manifest.json
 ================================================================================
-```json
+`json
 {
   "short_name": "Fire Code 305",
   "name": "مساعد كود الحريق المصري ٢٠٢٦ | Egyptian Fire Code Assistant",
@@ -75,11 +75,30 @@ export default defineConfig({
     {
       "src": "/favicon.svg",
       "type": "image/svg+xml",
-      "sizes": "192x192 512x512",
-      "purpose": "any maskable"
+      "sizes": "any",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512",
+      "purpose": "maskable"
     }
   ],
   "start_url": "/",
+  "scope": "/",
   "background_color": "#090d16",
   "theme_color": "#dc2626",
   "display": "standalone",
@@ -88,41 +107,49 @@ export default defineConfig({
   "lang": "ar"
 }
 
-```
+`
 
 ================================================================================
 📁 ملف: public/sw.js
 ================================================================================
-```javascript
+`javascript
 // Service Worker for Egyptian Fire Code Assistant
+// Version: v2.0.26 (Decree 255/2026 Aligned)
 // Engineered for 100% Offline Field Operations (Basements & Construction Sites)
-// Prepared by: Eng. Ahmed Fawzy
+// Prepared by: Eng. Ahmed Fawzy - Fire Fighting & Alarm Systems Engineer
 
-const CACHE_NAME = 'egyptian-fire-code-v1';
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/favicon.svg',
-  '/icons.svg'
+const CACHE_NAME = 'egyptian-fire-code-v2-2026';
+const PRECACHE_ASSETS = [
+  './',
+  './index.html',
+  './manifest.json',
+  './favicon.svg',
+  './icons.svg'
 ];
 
-// Install: Cache critical static shell
+// Install: Cache critical static shell safely (without aborting if an optional asset is missing)
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
+    caches.open(CACHE_NAME).then(async (cache) => {
+      await Promise.allSettled(
+        PRECACHE_ASSETS.map((asset) =>
+          cache.add(asset).catch((err) => {
+            console.warn('[SW] Precache asset skipped:', asset, err?.message);
+          })
+        )
+      );
     }).then(() => self.skipWaiting())
   );
 });
 
-// Activate: Clean up old caches
+// Activate: Clean up older cache versions and take control immediately
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
+            console.log('[SW] Purging outdated cache:', key);
             return caches.delete(key);
           }
         })
@@ -131,12 +158,15 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch: Network first with Cache fallback for navigation, Cache first for assets
+// Fetch Strategy:
+// 1. Firebase / Backend calls: Network only (with clean JSON offline response)
+// 2. Navigation (HTML): Network first with fallback to cached index.html
+// 3. Static Assets & Fonts: Stale-While-Revalidate with proper response cloning
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
 
-  // Ignore non-GET or chrome-extension requests
+  // Ignore non-GET or browser extension schemes
   if (req.method !== 'GET' || url.protocol.startsWith('chrome-extension')) {
     return;
   }
@@ -183,67 +213,82 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(req)
         .then((networkRes) => {
-          const clone = networkRes.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+          if (networkRes && networkRes.status === 200) {
+            const clone = networkRes.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+          }
           return networkRes;
         })
-        .catch(() => {
-          return caches.match('/index.html') || caches.match('/');
+        .catch(async () => {
+          const cachedIndex = 
+            (await caches.match('./index.html')) || 
+            (await caches.match('/index.html')) || 
+            (await caches.match('./')) || 
+            (await caches.match('/'));
+          return cachedIndex || new Response(
+            '<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"/><title>وضع عدم الاتصال</title></head><body style="font-family:sans-serif;text-align:center;padding:40px;"><h2>⚡ أنت الآن في وضع العمل بدون إنترنت</h2><p>يرجى فتح التطبيق مرة واحدة أثناء الاتصال بالإنترنت لتخزين كافة البيانات محلياً.</p></body></html>', 
+            { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+          );
         })
     );
     return;
   }
 
-  // Static Assets (JS, CSS, SVGs, Fonts): Cache first, fallback to network
+  // Static Assets (JS, CSS, SVGs, Fonts): Stale-While-Revalidate
   event.respondWith(
     caches.match(req).then((cachedRes) => {
       if (cachedRes) {
-        // Fetch in background to update cache (stale-while-revalidate)
-        fetch(req).then((networkRes) => {
-          if (networkRes.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => cache.put(req, networkRes));
-          }
-        }).catch(() => {/* Silent offline fallback */});
+        // Fetch in background to update cache (with response cloning to prevent 'body already used' error)
+        fetch(req)
+          .then((networkRes) => {
+            if (networkRes && networkRes.status === 200) {
+              const clone = networkRes.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+            }
+          })
+          .catch(() => {/* Silent offline fallback */});
         return cachedRes;
       }
 
       return fetch(req)
         .then((networkRes) => {
-          if (networkRes.status === 200) {
+          if (networkRes && networkRes.status === 200) {
             const clone = networkRes.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
           }
           return networkRes;
         })
         .catch(() => {
-          // If offline and requesting an image or font, return empty fallback
           return new Response('', { status: 408, statusText: 'Offline Mode' });
         });
     })
   );
 });
 
-```
+`
 
 ================================================================================
 📁 ملف: index.html
 ================================================================================
-```html
+`html
 <!doctype html>
 <html lang="ar" dir="rtl">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
     <meta name="description" content="منظومة دعم القرار والتحقق الهندسي لمطابقة الكود المصري لحماية المنشآت من أخطار الحريق الصادر بقرار وزير الإسكان رقم ٢٥٥ لسنة ٢٠٢٦" />
     <meta name="keywords" content="الكود المصري للحريق, كود الحريق 2026, الحماية المدنية, المركز القومي لبحوث الإسكان والبناء, HBRC, Decree 255/2026, مسافات الارتحال, مخارج الطوارئ, رشاشات الحريق" />
     <title>مساعد كود الحريق المصري ٢٠٢٦ | Egyptian Fire Code Assistant</title>
     
-    <!-- PWA & Offline Support -->
+    <!-- PWA & Mobile Web App Support for iOS & Android -->
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#dc2626" />
+    <meta name="theme-color" content="#090d16" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="كود الحريق ٣٠٥" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="format-detection" content="telephone=no" />
     <link rel="apple-touch-icon" href="/favicon.svg" />
 
     <!-- Preconnect to Google Fonts for Arabic Cairo & English Outfit -->
@@ -267,12 +312,12 @@ self.addEventListener('fetch', (event) => {
   </body>
 </html>
 
-```
+`
 
 ================================================================================
 📁 ملف: src/main.jsx
 ================================================================================
-```javascript
+`jsx
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
@@ -284,12 +329,12 @@ createRoot(document.getElementById('root')).render(
   </StrictMode>,
 )
 
-```
+`
 
 ================================================================================
 📁 ملف: src/index.css
 ================================================================================
-```css
+`css
 /* Egyptian Fire Code Assistant - Global Styles & Design System */
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700&display=swap');
 
@@ -359,6 +404,12 @@ createRoot(document.getElementById('root')).render(
   --radius-lg: 14px;
   --radius-xl: 20px;
   --radius-full: 9999px;
+
+  /* Safe Area Insets for iOS & Android Notches / Dynamic Island */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
 }
 
 *, *::before, *::after {
@@ -376,6 +427,32 @@ body {
   -webkit-font-smoothing: antialiased;
   direction: rtl;
   min-height: 100vh;
+  min-height: 100dvh;
+  padding-top: var(--safe-top);
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+  overflow-x: hidden;
+}
+
+/* Touch Ergonomics & Prevent iOS Safari Auto-Zoom on Form Inputs */
+input, select, textarea {
+  font-size: 16px !important; /* Critical: <=15px triggers iOS auto-zoom */
+  touch-action: manipulation;
+  font-family: inherit;
+}
+
+button {
+  touch-action: manipulation;
+  font-family: inherit;
+}
+
+/* Responsive Table Container */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1rem;
+  border-radius: var(--radius-sm);
 }
 
 [dir="ltr"] body,
@@ -389,6 +466,7 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .main-content {
@@ -425,21 +503,48 @@ body {
   border: 1px solid rgba(254, 240, 138, 0.3);
 }
 
-/* Disclaimer Bar */
+/* High-Visibility Enlarged Disclaimer Bar */
 .disclaimer-strip {
-  background: #fffbeb;
-  border-bottom: 1px solid #fde68a;
-  color: #92400e;
-  padding: 10px 20px;
-  font-size: 0.84rem;
+  background: linear-gradient(90deg, #fef3c7 0%, #fffbeb 50%, #fef3c7 100%);
+  border-bottom: 2px solid #f59e0b;
+  border-top: 1px solid rgba(245, 158, 11, 0.35);
+  color: #78350f;
+  padding: 13px 24px;
+  font-size: 1.02rem;
+  font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.12);
+  line-height: 1.6;
+  text-align: center;
+}
+
+.disclaimer-strip-badge {
+  background: linear-gradient(135deg, #b45309, #d97706);
+  color: #ffffff;
+  padding: 5px 14px;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 0.92rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(180, 83, 9, 0.35);
+  letter-spacing: 0.2px;
+}
+
+.disclaimer-strip-text {
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: #78350f;
 }
 
 .disclaimer-strip svg {
   flex-shrink: 0;
-  color: #b45309;
 }
 
 /* Header & Nav */
@@ -500,12 +605,34 @@ body {
   line-height: 1.2;
 }
 
+.authority-banner {
+  background: #0a0f1d;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 6px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.78rem;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.authority-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .nav-tabs {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 0;
-  flex-wrap: nowrap;
+  padding: 4px 2px;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 
 .nav-tab-btn {
@@ -515,12 +642,12 @@ body {
   font-family: inherit;
   font-size: 0.79rem;
   font-weight: 600;
-  padding: 6px 9px;
+  padding: 6px 10px;
   border-radius: var(--radius-md);
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   transition: all 0.2s ease;
   white-space: nowrap;
   flex-shrink: 0;
@@ -542,29 +669,35 @@ body {
     display: none;
   }
   .nav-tab-btn {
-    padding: 5px 7px;
+    padding: 5px 8px;
     font-size: 0.75rem;
     gap: 4px;
-  }
-  .nav-tabs {
-    gap: 2px;
   }
 }
 
 @media (max-width: 960px) {
+  .authority-banner {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+  .authority-controls {
+    justify-content: center;
+  }
   .header-inner {
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
     gap: 8px;
     padding: 8px 10px;
   }
   .nav-tabs {
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 4px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 4px 0 8px 0;
+    justify-content: flex-start;
   }
   .nav-tab-btn {
-    padding: 5px 8px;
+    padding: 6px 9px;
     font-size: 0.73rem;
   }
 }
@@ -848,7 +981,7 @@ body {
 .pill-facts { background: #f1f5f9; color: #334155; }
 .pill-review { background: #fae8ff; color: #86198f; }
 
-/* Responsive Grid */
+/* Responsive Grid System */
 .grid-2 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -867,9 +1000,237 @@ body {
   gap: 16px;
 }
 
+/* Specific Component Responsive Layouts */
+.calc-responsive-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(380px, 1.25fr);
+  gap: 20px;
+}
+
+.drawing-review-grid {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 20px;
+}
+
+.splash-modal-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(340px, 1.15fr);
+  gap: 24px;
+}
+
+.calc-stat-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.report-sheet {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-lg);
+  padding: clamp(16px, 4vw, 48px);
+  max-width: 960px;
+  margin: 0 auto;
+  width: 100%;
+  box-shadow: var(--shadow-lg);
+  line-height: 1.7;
+  color: #0f172a;
+}
+
+/* Mobile Bottom Navigation Bar */
+.mobile-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  z-index: 1000;
+  padding: 6px 8px calc(6px + var(--safe-bottom)) 8px;
+  justify-content: space-around;
+  align-items: center;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.35);
+}
+
+.mobile-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  padding: 6px 2px;
+  min-height: 48px;
+  min-width: 48px;
+  border-radius: var(--radius-md);
+  font-size: 0.68rem;
+  font-weight: 700;
+  gap: 3px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.mobile-nav-item:active {
+  transform: scale(0.95);
+}
+
+.mobile-nav-item.active {
+  color: #ffffff;
+}
+
+.mobile-nav-item.active .mobile-nav-icon-wrap {
+  background: linear-gradient(135deg, var(--fire-red-600) 0%, var(--fire-red-700) 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.5);
+}
+
+.mobile-nav-icon-wrap {
+  width: 32px;
+  height: 28px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.mobile-nav-badge {
+  position: absolute;
+  top: 4px;
+  right: 50%;
+  transform: translateX(14px);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gold-accent);
+  box-shadow: 0 0 6px var(--gold-accent);
+}
+
+/* Mobile More Tools Slide-Up Sheet */
+.mobile-more-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 11, 24, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.mobile-more-sheet {
+  background: #0f172a;
+  border-top: 2px solid var(--gold-accent);
+  border-radius: 24px 24px 0 0;
+  padding: 20px 18px calc(24px + var(--safe-bottom)) 18px;
+  max-height: 85dvh;
+  overflow-y: auto;
+  color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6);
+  animation: slideUpSheet 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUpSheet {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.mobile-sheet-drag-handle {
+  width: 44px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  margin: 0 auto 6px auto;
+}
+
+.mobile-more-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.mobile-more-tool-card {
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  text-align: right;
+  color: #f8fafc;
+  transition: all 0.2s ease;
+  min-height: 54px;
+}
+
+[dir="ltr"] .mobile-more-tool-card {
+  text-align: left;
+}
+
+.mobile-more-tool-card:active {
+  background: rgba(220, 38, 38, 0.2);
+  border-color: var(--fire-red-500);
+  transform: scale(0.98);
+}
+
+.mobile-more-tool-card.active {
+  background: rgba(220, 38, 38, 0.25);
+  border-color: var(--fire-red-500);
+  box-shadow: 0 0 12px rgba(220, 38, 38, 0.25);
+}
+
 @media (max-width: 1024px) {
   .grid-3, .grid-4 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .calc-responsive-grid {
+    grid-template-columns: 1fr;
+  }
+  .drawing-review-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .drawing-mobile-tabs {
+    display: flex !important;
+  }
+  .drawing-review-grid[data-mobile-tab="canvas"] .drawing-left-col {
+    display: none !important;
+  }
+  .drawing-review-grid[data-mobile-tab="canvas"] .drawing-right-col {
+    display: flex !important;
+  }
+  .drawing-review-grid[data-mobile-tab="facts"] .drawing-right-col {
+    display: none !important;
+  }
+  .drawing-review-grid[data-mobile-tab="facts"] .drawing-file-picker-card {
+    display: none !important;
+  }
+  .drawing-review-grid[data-mobile-tab="facts"] .drawing-left-col {
+    display: flex !important;
+  }
+  .drawing-review-grid[data-mobile-tab="files"] .drawing-right-col {
+    display: none !important;
+  }
+  .drawing-review-grid[data-mobile-tab="files"] .drawing-facts-card {
+    display: none !important;
+  }
+  .drawing-review-grid[data-mobile-tab="files"] .drawing-left-col {
+    display: flex !important;
   }
 }
 
@@ -877,14 +1238,52 @@ body {
   .grid-2, .grid-3, .grid-4 {
     grid-template-columns: 1fr;
   }
-  .header-inner {
-    flex-direction: column;
-    align-items: stretch;
+  .splash-modal-grid {
+    grid-template-columns: 1fr;
   }
+  .calc-stat-cards {
+    grid-template-columns: 1fr;
+  }
+  .main-content {
+    padding: 12px 12px calc(80px + var(--safe-bottom)) 12px;
+  }
+  .header-inner {
+    padding: 8px 12px;
+  }
+  /* On mobile, primary thumb navigation is handled by bottom nav */
+  .header-surface .nav-tabs {
+    display: none !important;
+  }
+  .mobile-bottom-nav {
+    display: flex;
+  }
+  /* AI Floating trigger stays above bottom nav */
   .floating-ai-trigger {
-    bottom: 16px;
-    left: 16px;
-    padding: 10px 16px;
+    bottom: calc(68px + var(--safe-bottom)) !important;
+    left: 14px !important;
+    padding: 8px 14px !important;
+    font-size: 0.82rem !important;
+    border-radius: var(--radius-full);
+  }
+  [dir="ltr"] .floating-ai-trigger {
+    left: auto !important;
+    right: 14px !important;
+  }
+  /* Full screen mobile AI Drawer with keyboard resilience */
+  .ai-drawer {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: 0 !important;
+    z-index: 99999 !important;
+    border: none !important;
   }
 }
 
@@ -898,14 +1297,13 @@ body {
   }
 }
 
-.spin,
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
-.spin-slow,
-.animate-spin-slow {
-  animation: spin 2.5s linear infinite;
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes fadeIn {
@@ -919,16 +1317,95 @@ body {
   }
 }
 
-.fadeIn,
-.animate-fade-in {
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(245, 158, 11, 0.7);
+  }
+}
+
+.animate-spin,
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+.animate-spin-slow,
+.spin-slow {
+  animation: spin 2.5s linear infinite;
+}
+
+.animate-fade-in,
+.fadeIn {
   animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
-```
+
+.animate-pulse-glow {
+  animation: pulseGlow 2.5s infinite ease-in-out;
+}
+
+/* Responsive Code Library Layout */
+.code-library-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .code-library-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Official Print Layout Optimization */
+@media print {
+  /* Hide non-printable navigation, assistants, banners, and modals */
+  nav,
+  .navbar,
+  .floating-assistant-container,
+  .no-print,
+  button,
+  .btn-primary,
+  .btn-secondary,
+  .modal-backdrop,
+  header {
+    display: none !important;
+  }
+
+  body, html {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11pt !important;
+  }
+
+  .main-content, .card {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Ensure high-contrast readable text in printed reports */
+  h1, h2, h3, h4, strong {
+    color: #000000 !important;
+  }
+
+  a {
+    text-decoration: none !important;
+    color: #000000 !important;
+  }
+}
+
+
+
+`
 
 ================================================================================
 📁 ملف: src/App.jsx
 ================================================================================
-```javascript
+`jsx
 import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Dashboard from './components/Dashboard';
@@ -943,6 +1420,8 @@ import SplashScreen from './components/SplashScreen';
 import EngineeringCalculators from './components/EngineeringCalculators';
 import FirebaseSyncModal from './components/FirebaseSyncModal';
 import RejectionsAndInterpretations from './components/RejectionsAndInterpretations';
+import AdminLoginModal from './components/AdminLoginModal';
+import { deleteProjectFromFirestore } from './services/firebaseConfig';
 
 // Resilient Error Boundary to ensure tabs never freeze
 class TabErrorBoundary extends React.Component {
@@ -1030,6 +1509,43 @@ export default function App() {
     }
   });
   const [isFirebaseModalOpen, setIsFirebaseModalOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(() => {
+    try {
+      if (typeof window !== 'undefined' && window.location) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const adminParam = urlParams.get('admin');
+        if (adminParam && ['2026', 'true', 'fawzy', 'fawzy2026', 'ahmed2026', 'admin'].includes(adminParam.toLowerCase())) {
+          localStorage.setItem('agy_egyptian_fire_admin', 'true');
+          return true;
+        }
+      }
+      return localStorage.getItem('agy_egyptian_fire_admin') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
+
+  const handleAdminLoginSuccess = () => {
+    setIsAdmin(true);
+    try {
+      localStorage.setItem('agy_egyptian_fire_admin', 'true');
+    } catch (e) {
+      console.warn('LocalStorage error:', e);
+    }
+  };
+
+  const handleAdminLogout = () => {
+    setIsAdmin(false);
+    try {
+      localStorage.removeItem('agy_egyptian_fire_admin');
+    } catch (e) {
+      console.warn('LocalStorage error:', e);
+    }
+    if (currentTab === 'admin') {
+      setCurrentTab('dashboard');
+    }
+  };
 
   const handleOpenAssistantWithQuery = (queryText) => {
     setAssistantInitialQuery(queryText);
@@ -1158,7 +1674,7 @@ export default function App() {
     document.body.dir = lang === 'ar' ? 'rtl' : 'ltr';
   }, [lang]);
 
-  // Handle Project Deletion
+  // Handle Project Deletion (local + Cloud sync)
   const handleDeleteProject = (projectId) => {
     setProjects(prev => {
       const updated = prev.filter(p => p.id !== projectId);
@@ -1168,6 +1684,10 @@ export default function App() {
       const remaining = projects.filter(p => p.id !== projectId);
       setSelectedProjectId(remaining.length > 0 ? remaining[0].id : null);
     }
+    // Delete from Firestore if configured
+    deleteProjectFromFirestore(projectId).catch(err => {
+      console.warn('Firestore cloud deletion skipped or not connected:', err?.message);
+    });
   };
 
   // Handle Restoring Default Sample Projects
@@ -1195,9 +1715,11 @@ export default function App() {
     setCurrentTab('assessment');
   };
 
-  // Handle selecting a project
-  const handleSelectProject = (projId) => {
-    setSelectedProjectId(projId);
+  // Handle selecting a project (accepts either project object or projectId string)
+  const handleSelectProject = (projOrId) => {
+    if (!projOrId) return;
+    const id = typeof projOrId === 'object' ? projOrId.id : projOrId;
+    setSelectedProjectId(id);
   };
 
   // Handle saving assessment results to active project
@@ -1264,6 +1786,9 @@ export default function App() {
         onSelectProject={handleSelectProject}
         onOpenSplash={() => setIsSplashOpen(true)}
         onOpenFirebase={() => setIsFirebaseModalOpen(true)}
+        isAdmin={isAdmin}
+        onOpenAdminLogin={() => setIsAdminLoginOpen(true)}
+        onLogoutAdmin={handleAdminLogout}
       />
 
       {/* Main Content View Switcher wrapped in TabErrorBoundary */}
@@ -1281,6 +1806,7 @@ export default function App() {
               onRestoreDefaultProjects={handleRestoreDefaultProjects}
               onAddNewProject={handleAddNewProject}
               onOpenFirebase={() => setIsFirebaseModalOpen(true)}
+              isAdmin={isAdmin}
             />
           )}
 
@@ -1342,9 +1868,77 @@ export default function App() {
           )}
 
           {currentTab === 'admin' && (
-            <AdminView 
-              lang={lang}
-            />
+            isAdmin ? (
+              <AdminView 
+                lang={lang}
+              />
+            ) : (
+              <div style={{
+                maxWidth: '620px',
+                margin: '50px auto',
+                background: '#ffffff',
+                borderRadius: '16px',
+                padding: '40px 24px',
+                border: '1px solid #e2e8f0',
+                boxShadow: '0 10px 25px rgba(0, 0, 0, 0.05)',
+                textAlign: 'center'
+              }}>
+                <div style={{
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: '50%',
+                  background: '#fef3c7',
+                  color: '#d97706',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 16px auto',
+                  fontSize: '2rem'
+                }}>
+                  🔒
+                </div>
+                <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
+                  {lang === 'ar' ? 'لوحة تحكم المشرف مقفلة' : 'Admin Panel Locked'}
+                </h3>
+                <p style={{ fontSize: '0.88rem', color: '#64748b', lineHeight: 1.6, marginBottom: '24px' }}>
+                  {lang === 'ar' 
+                    ? 'هذا القسم مخصص لإدارة الكود ومصادر البيانات الرسمية للمهندس أحمد فوزي. يمكنك تسجيل الدخول بكلمة المرور أو متابعة استخدام أدوات الكود الهندسية المتاحة للزوار.'
+                    : 'This section is reserved for code administration and source metadata by Eng. Ahmed Fawzy. Please log in or continue using public engineering tools.'}
+                </p>
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsAdminLoginOpen(true)}
+                    style={{
+                      background: '#0f172a',
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '10px 22px',
+                      borderRadius: '8px',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {lang === 'ar' ? '🔐 تسجيل دخول المسؤول' : '🔐 Admin Login'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentTab('dashboard')}
+                    style={{
+                      background: '#f1f5f9',
+                      color: '#334155',
+                      border: '1px solid #cbd5e1',
+                      padding: '10px 20px',
+                      borderRadius: '8px',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {lang === 'ar' ? 'العودة للرئيسية' : 'Back to Dashboard'}
+                  </button>
+                </div>
+              </div>
+            )
           )}
         </TabErrorBoundary>
       </main>
@@ -1407,30 +2001,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Button to open Intro / Fire Triangle Splash */}
-            <button
-              type="button"
-              onClick={() => setIsSplashOpen(true)}
-              style={{
-                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(245, 158, 11, 0.2))',
-                border: '1px solid #f59e0b',
-                color: '#fef08a',
-                padding: '8px 16px',
-                borderRadius: '999px',
-                fontSize: '0.8rem',
-                fontWeight: 700,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-              title={lang === 'ar' ? 'استعراض شعار مثلث الحريق وبطاقة المهندس المصمم' : 'View Fire Triangle & Designer Card'}
-            >
-              <span>🔥</span>
-              <span>{lang === 'ar' ? 'شعار مثلث الحريق وبطاقة الاعتماد' : 'Fire Triangle & Credentials'}</span>
-            </button>
-
             {/* Copyright badge */}
             <div style={{
               fontSize: '0.78rem',
@@ -1464,11 +2034,51 @@ export default function App() {
             </span>
           </div>
 
-          <p style={{ color: '#64748b', fontSize: '0.74rem', maxWidth: '960px', margin: '0 auto', lineHeight: 1.5 }}>
-            {lang === 'ar' 
-              ? 'تنبيه قانوني ومهني: المنظومة مخصصة لتمكين الاستشاريين والمهندسين من فحص وتدقيق المعايير الهندسية والحسابية. القرارات والاعتمادات النهائية تظل اختصاصاً حصرياً للإدارة العامة للحماية المدنية بوزارة الداخلية واللجان الفنية المختصة.'
-              : 'Legal Notice: This system assists consultants and engineers in verifying code requirements. Final approval remains under the sole authority of the General Administration of Civil Protection and competent statutory committees.'}
-          </p>
+          {/* Prominent High-Visibility Legal & Professional Disclaimer Box */}
+          <div style={{
+            maxWidth: '1000px',
+            margin: '12px auto 0 auto',
+            background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(220, 38, 38, 0.18) 100%)',
+            border: '2px solid rgba(245, 158, 11, 0.7)',
+            borderRadius: '14px',
+            padding: '16px 24px',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4), 0 0 20px rgba(245, 158, 11, 0.25)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            textAlign: lang === 'ar' ? 'right' : 'left'
+          }}>
+            <div style={{
+              fontSize: '2rem',
+              lineHeight: 1,
+              flexShrink: 0,
+              filter: 'drop-shadow(0 2px 8px rgba(245, 158, 11, 0.6))'
+            }}>
+              ⚠️
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{
+                color: '#fef08a',
+                fontSize: '1.02rem',
+                fontWeight: 900,
+                letterSpacing: '0.2px',
+                marginBottom: '4px'
+              }}>
+                {lang === 'ar' ? 'تنبيه قانوني ومهني ملزم' : 'Mandatory Legal & Professional Notice'}
+              </div>
+              <p style={{
+                color: '#f1f5f9',
+                fontSize: '0.92rem',
+                fontWeight: 600,
+                lineHeight: 1.7,
+                margin: 0
+              }}>
+                {lang === 'ar' 
+                  ? 'المنظومة مخصصة لتمكين الاستشاريين والمهندسين من فحص وتدقيق المعايير الهندسية والحسابية استرشادياً وفق الكود المصري لحماية المنشآت من أخطار الحريق (قرار ٢٥٥ لسنة ٢٠٢٦). القرارات والموافقات والاعتمادات النهائية تظل اختصاصاً حصرياً ومطلقاً للإدارة العامة للحماية المدنية بوزارة الداخلية واللجان الفنية المختصة.'
+                  : 'This software is an engineering decision-support tool designed to assist consultants and engineers in verifying Egyptian Fire Code provisions (Decree No. 255/2026). Final approvals, certifications, and statutory permits remain under the exclusive and statutory authority of the General Administration of Civil Protection and authorized official committees.'}
+              </p>
+            </div>
+          </div>
         </div>
       </footer>
 
@@ -1479,24 +2089,36 @@ export default function App() {
         lang={lang} 
       />
 
-      {/* Firebase Cloud Database Sync & Management Modal */}
-      <FirebaseSyncModal 
-        isOpen={isFirebaseModalOpen}
-        onClose={() => setIsFirebaseModalOpen(false)}
+      {/* Firebase Cloud Database Sync & Management Modal (Admin Only) */}
+      <TabErrorBoundary lang={lang}>
+        {isAdmin && isFirebaseModalOpen && (
+          <FirebaseSyncModal 
+            isOpen={isFirebaseModalOpen}
+            onClose={() => setIsFirebaseModalOpen(false)}
+            lang={lang}
+            projects={projects}
+            onProjectsUpdated={(newProjects) => setProjects(newProjects)}
+          />
+        )}
+      </TabErrorBoundary>
+
+      {/* Discreet Admin Login Modal for Eng. Ahmed Fawzy */}
+      <AdminLoginModal 
+        isOpen={isAdminLoginOpen}
+        onClose={() => setIsAdminLoginOpen(false)}
+        onLoginSuccess={handleAdminLoginSuccess}
         lang={lang}
-        projects={projects}
-        onProjectsUpdated={(newProjects) => setProjects(newProjects)}
       />
     </div>
   );
 }
 
-```
+`
 
 ================================================================================
 📁 ملف: src/components/Navbar.jsx
 ================================================================================
-```javascript
+`jsx
 import React, { useState, useEffect } from 'react';
 import { 
   ShieldAlert, 
@@ -1511,10 +2133,18 @@ import {
   AlertTriangle,
   Calculator,
   Wifi,
-  WifiOff
+  WifiOff,
+  MoreHorizontal,
+  X,
+  Layers,
+  Sparkles,
+  Cloud,
+  Lock,
+  ShieldCheck
 } from 'lucide-react';
 import { OFFICIAL_METADATA } from '../data/codeKnowledgeBase';
 import OfflineModeModal from './OfflineModeModal';
+import FireBrandLogo from './FireBrandLogo';
 
 export default function Navbar({ 
   currentTab, 
@@ -1525,11 +2155,15 @@ export default function Navbar({
   sampleProjects, 
   onSelectProject,
   onOpenSplash,
-  onOpenFirebase
+  onOpenFirebase,
+  isAdmin = false,
+  onOpenAdminLogin,
+  onLogoutAdmin
 }) {
   const isAr = lang === 'ar';
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [isOfflineModalOpen, setIsOfflineModalOpen] = useState(false);
+  const [isMoreSheetOpen, setIsMoreSheetOpen] = useState(false);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -1548,13 +2182,45 @@ export default function Navbar({
     { id: 'dashboard', labelAr: 'لوحة القيادة', labelEn: 'Dashboard', icon: Building2 },
     { id: 'assessment', labelAr: 'تقييم المشاريع', labelEn: 'Project Assessment', icon: FileCheck2 },
     { id: 'calculators', labelAr: 'الحاسبات التفاعلية', labelEn: 'Code Calculators', icon: Calculator },
-    { id: 'rejections', labelAr: 'أخطاء الحماية والتفسيرات', labelEn: 'Rejections & Interpretations', icon: AlertTriangle },
-    { id: 'library', labelAr: 'تصفح الكود الكامل', labelEn: 'Full Code Browser', icon: BookOpen },
     { id: 'drawing', labelAr: 'فحص المخططات', labelEn: 'Drawing Review', icon: ClipboardList },
+    { id: 'library', labelAr: 'تصفح الكود الكامل', labelEn: 'Full Code Browser', icon: BookOpen },
+    { id: 'rejections', labelAr: 'أخطاء الحماية والتفسيرات', labelEn: 'Rejections & Interpretations', icon: AlertTriangle },
     { id: 'issues', labelAr: 'دراسة الحالات', labelEn: 'Issue Workspace', icon: ShieldAlert },
     { id: 'reports', labelAr: 'التقارير والمذكرات', labelEn: 'Official Reports', icon: FileText },
     { id: 'admin', labelAr: 'المصادر والتحكم', labelEn: 'Admin & Sources', icon: Settings },
   ];
+
+  // Mobile Bottom Bar Primary Tabs
+  const primaryMobileTabs = [
+    { id: 'dashboard', labelAr: 'الرئيسية', labelEn: 'Home', icon: Building2 },
+    { id: 'assessment', labelAr: 'التقييم', labelEn: 'Assessment', icon: FileCheck2 },
+    { id: 'calculators', labelAr: 'الحاسبات', labelEn: 'Calculators', icon: Calculator },
+    { id: 'drawing', labelAr: 'المخططات', labelEn: 'Drawings', icon: ClipboardList }
+  ];
+
+  // Secondary Tools for Mobile More Sheet
+  const secondaryMobileTools = [
+    { id: 'library', labelAr: 'تصفح الكود الكامل', labelEn: 'Full Code Browser', descAr: 'الأجزاء الثلاثة والقرارات الوزارية ٢٠٢٦', icon: BookOpen, color: '#dc2626' },
+    { id: 'rejections', labelAr: 'أسباب الرفض والتفسيرات', labelEn: 'Rejections & Interpretations', descAr: 'بنود التناقض ومخالفات الحماية المدنية', icon: AlertTriangle, color: '#f59e0b' },
+    { id: 'issues', labelAr: 'دراسة الحالات الميدانية', labelEn: 'Field Cases & Issues', descAr: 'فحص المشاكل الحرجة للمشروع', icon: ShieldAlert, color: '#0284c7' },
+    { id: 'reports', labelAr: 'التقارير والمذكرات الرسمية', labelEn: 'Official Reports & Memos', descAr: 'تصدير Word وطباعة المذكرات المعتمدة', icon: FileText, color: '#16a34a' },
+    { id: 'admin', labelAr: 'المصادر والتحكم', labelEn: 'Admin & Code Sources', descAr: 'بيانات الاعتماد وإحصائيات الكود', icon: Settings, color: '#64748b' }
+  ];
+
+  const visibleNavItems = isAdmin 
+    ? navItems 
+    : navItems.filter(item => item.id !== 'admin');
+
+  const visibleSecondaryTools = isAdmin 
+    ? secondaryMobileTools 
+    : secondaryMobileTools.filter(tool => tool.id !== 'admin');
+
+  const isCurrentInSecondary = visibleSecondaryTools.some(tool => tool.id === currentTab);
+
+  const handleSelectTab = (tabId) => {
+    setCurrentTab(tabId);
+    setIsMoreSheetOpen(false);
+  };
 
   return (
     <>
@@ -1571,7 +2237,7 @@ export default function Navbar({
               : 'Housing & Building National Research Center (HBRC) in coordination with Civil Protection'}
           </span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div className="authority-controls">
           {selectedProject && (
             <div style={{ fontSize: '0.82rem', color: '#fef08a', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ color: '#94a3b8' }}>{isAr ? 'المشروع النشط:' : 'Active Project:'}</span>
@@ -1601,28 +2267,92 @@ export default function Navbar({
             <span>{isAr ? 'مثلث الحريق | م. أحمد فوزي' : 'Fire Triangle | Eng. Ahmed Fawzy'}</span>
           </button>
 
-          <button 
-            type="button"
-            onClick={onOpenFirebase}
-            style={{
-              background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(59, 130, 246, 0.2))',
-              border: '1px solid rgba(245, 158, 11, 0.4)',
-              color: '#93c5fd',
-              borderRadius: '999px',
-              padding: '3px 12px',
-              fontSize: '0.78rem',
-              fontWeight: 800,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
-            title={isAr ? 'إدارة ومزامنة قاعدة بيانات Firebase (fire-code-9603d)' : 'Manage Firebase Database (fire-code-9603d)'}
-          >
-            <span>☁️</span>
-            <span>{isAr ? 'فايربيز | fire-code-9603d' : 'Firebase DB'}</span>
-          </button>
+          {/* Conditional Admin Controls: Firebase DB vs Public Admin Login */}
+          {isAdmin ? (
+            <>
+              <button 
+                type="button"
+                onClick={onOpenFirebase}
+                style={{
+                  background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(59, 130, 246, 0.2))',
+                  border: '1px solid rgba(245, 158, 11, 0.4)',
+                  color: '#93c5fd',
+                  borderRadius: '999px',
+                  padding: '3px 12px',
+                  fontSize: '0.78rem',
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                title={isAr ? 'إدارة ومزامنة قاعدة بيانات Firebase (fire-code-9603d)' : 'Manage Firebase Database (fire-code-9603d)'}
+              >
+                <span>☁️</span>
+                <span>{isAr ? 'فايربيز | fire-code-9603d' : 'Firebase DB'}</span>
+              </button>
+
+              <div 
+                style={{
+                  background: 'rgba(239, 68, 68, 0.18)',
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                  color: '#fca5a5',
+                  borderRadius: '999px',
+                  padding: '3px 10px',
+                  fontSize: '0.75rem',
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <ShieldCheck size={13} color="#ef4444" />
+                <span>{isAr ? 'وضع المسؤول' : 'Admin'}</span>
+                {onLogoutAdmin && (
+                  <button
+                    type="button"
+                    onClick={onLogoutAdmin}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#ffffff',
+                      cursor: 'pointer',
+                      fontSize: '0.72rem',
+                      textDecoration: 'underline',
+                      padding: 0
+                    }}
+                    title={isAr ? 'العودة لواجهة المستخدم العادي' : 'Exit to Public Visitor View'}
+                  >
+                    ({isAr ? 'خروج' : 'Exit'})
+                  </button>
+                )}
+              </div>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={onOpenAdminLogin}
+              style={{
+                background: 'rgba(255, 255, 255, 0.06)',
+                border: '1px solid rgba(255, 255, 255, 0.18)',
+                color: '#cbd5e1',
+                borderRadius: '999px',
+                padding: '3px 11px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              title={isAr ? 'تسجيل دخول المهندس المسؤول والمالك (م. أحمد فوزي)' : 'Engineer & Admin Login'}
+            >
+              <Lock size={12} color="#fca5a5" />
+              <span>{isAr ? 'دخول المسؤول' : 'Admin Login'}</span>
+            </button>
+          )}
 
           <button 
             type="button"
@@ -1668,8 +2398,8 @@ export default function Navbar({
         <div className="header-inner">
           {/* Brand */}
           <div className="brand-section" onClick={() => setCurrentTab('dashboard')}>
-            <div className="brand-logo-shield">
-              <ShieldAlert size={22} />
+            <div className="brand-logo-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <FireBrandLogo size={40} />
             </div>
             <div className="brand-text">
               <h1>{isAr ? 'مساعد كود الحريق المصري' : 'Egyptian Fire Code Assistant'}</h1>
@@ -1677,9 +2407,9 @@ export default function Navbar({
             </div>
           </div>
 
-          {/* Navigation Tabs */}
+          {/* Navigation Tabs (Desktop / Tablet) */}
           <nav className="nav-tabs" role="tablist">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = currentTab === item.id;
               return (
@@ -1701,14 +2431,246 @@ export default function Navbar({
         </div>
       </header>
 
-      {/* Disclaimer Notice Strip */}
-      <div className="disclaimer-strip">
-        <AlertTriangle size={18} />
-        <div>
-          <strong>{isAr ? 'تنبيه مهني هام: ' : 'Professional Legal Notice: '}</strong>
-          <span>{isAr ? OFFICIAL_METADATA.disclaimerAr : OFFICIAL_METADATA.disclaimerEn}</span>
+      {/* High-Visibility Enlarged Disclaimer Notice Strip */}
+      <div className="disclaimer-strip" role="alert">
+        <div className="disclaimer-strip-badge">
+          <AlertTriangle size={18} color="#ffffff" />
+          <span>{isAr ? 'تنبيه مهني وقانوني هام:' : 'Important Legal Notice:'}</span>
+        </div>
+        <div className="disclaimer-strip-text">
+          {isAr ? OFFICIAL_METADATA.disclaimerAr : OFFICIAL_METADATA.disclaimerEn}
         </div>
       </div>
+
+      {/* Native Mobile Bottom Navigation Bar (Screens <= 768px) */}
+      <nav className="mobile-bottom-nav" aria-label="Mobile Navigation">
+        {primaryMobileTabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = currentTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              className={`mobile-nav-item ${isActive ? 'active' : ''}`}
+              onClick={() => handleSelectTab(tab.id)}
+              aria-label={isAr ? tab.labelAr : tab.labelEn}
+            >
+              <div className="mobile-nav-icon-wrap">
+                <Icon size={18} />
+              </div>
+              <span>{isAr ? tab.labelAr : tab.labelEn}</span>
+            </button>
+          );
+        })}
+
+        {/* More Tools Tab Button */}
+        <button
+          type="button"
+          className={`mobile-nav-item ${isMoreSheetOpen || isCurrentInSecondary ? 'active' : ''}`}
+          onClick={() => setIsMoreSheetOpen(!isMoreSheetOpen)}
+          aria-label={isAr ? 'المزيد من الأدوات' : 'More Tools'}
+        >
+          {isCurrentInSecondary && <div className="mobile-nav-badge" />}
+          <div className="mobile-nav-icon-wrap">
+            <MoreHorizontal size={18} />
+          </div>
+          <span>{isAr ? 'المزيد...' : 'More...'}</span>
+        </button>
+      </nav>
+
+      {/* Mobile More Tools Slide-Up Sheet */}
+      {isMoreSheetOpen && (
+        <div className="mobile-more-overlay" onClick={() => setIsMoreSheetOpen(false)}>
+          <div className="mobile-more-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="mobile-sheet-drag-handle" />
+            
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Layers size={18} color="#f59e0b" />
+                <strong style={{ fontSize: '1rem', color: '#f8fafc' }}>
+                  {isAr ? 'الأدوات والمصادر الهندسية الإضافية' : 'Additional Engineering Tools'}
+                </strong>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMoreSheetOpen(false)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: 'none',
+                  color: '#94a3b8',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer'
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Grid of Secondary Navigation Tools */}
+            <div className="mobile-more-grid">
+              {visibleSecondaryTools.map((tool) => {
+                const Icon = tool.icon;
+                const isActive = currentTab === tool.id;
+                return (
+                  <div
+                    key={tool.id}
+                    className={`mobile-more-tool-card ${isActive ? 'active' : ''}`}
+                    onClick={() => handleSelectTab(tool.id)}
+                  >
+                    <div style={{
+                      width: '34px',
+                      height: '34px',
+                      borderRadius: '8px',
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: tool.color,
+                      flexShrink: 0
+                    }}>
+                      <Icon size={18} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.84rem', fontWeight: 800 }}>
+                        {isAr ? tool.labelAr : tool.labelEn}
+                      </div>
+                      <div style={{ fontSize: '0.68rem', color: '#94a3b8', lineHeight: 1.2, marginTop: '2px' }}>
+                        {isAr ? tool.descAr : tool.labelEn}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Quick Actions Bar inside Mobile Sheet */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, 1fr)',
+              gap: '8px',
+              paddingTop: '8px',
+              borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+            }}>
+              <button
+                type="button"
+                onClick={() => { setIsMoreSheetOpen(false); setIsOfflineModalOpen(true); }}
+                style={{
+                  background: isOnline ? 'rgba(34, 197, 94, 0.12)' : 'rgba(239, 68, 68, 0.2)',
+                  border: isOnline ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid #ef4444',
+                  color: isOnline ? '#86efac' : '#fca5a5',
+                  borderRadius: '8px',
+                  padding: '10px 8px',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  justifyContent: 'center',
+                  cursor: 'pointer'
+                }}
+              >
+                {isOnline ? <Wifi size={14} /> : <WifiOff size={14} />}
+                <span>{isAr ? 'وضع الأوفلاين بالموقع' : 'Offline Mode'}</span>
+              </button>
+
+              {isAdmin ? (
+                <button
+                  type="button"
+                  onClick={() => { setIsMoreSheetOpen(false); onOpenFirebase(); }}
+                  style={{
+                    background: 'rgba(59, 130, 246, 0.12)',
+                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                    color: '#93c5fd',
+                    borderRadius: '8px',
+                    padding: '10px 8px',
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    justifyContent: 'center',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Cloud size={14} />
+                  <span>{isAr ? 'فايربيز السحابية' : 'Firebase Sync'}</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => { setIsMoreSheetOpen(false); onOpenAdminLogin && onOpenAdminLogin(); }}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#cbd5e1',
+                    borderRadius: '8px',
+                    padding: '10px 8px',
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    justifyContent: 'center',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Lock size={14} />
+                  <span>{isAr ? 'دخول المسؤول' : 'Admin Login'}</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => { setIsMoreSheetOpen(false); onOpenSplash(); }}
+                style={{
+                  background: 'rgba(245, 158, 11, 0.12)',
+                  border: '1px solid rgba(245, 158, 11, 0.3)',
+                  color: '#fef08a',
+                  borderRadius: '8px',
+                  padding: '10px 8px',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  justifyContent: 'center',
+                  cursor: 'pointer'
+                }}
+              >
+                <span>🔥</span>
+                <span>{isAr ? 'مثلث الحريق | م. فوزي' : 'Fire Triangle'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setLang(isAr ? 'en' : 'ar')}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  color: '#ffffff',
+                  borderRadius: '8px',
+                  padding: '10px 8px',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  justifyContent: 'center',
+                  cursor: 'pointer'
+                }}
+              >
+                <Languages size={14} />
+                <span>{isAr ? 'English' : 'عربي'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Offline Field Mode Modal */}
       <OfflineModeModal 
@@ -1721,12 +2683,12 @@ export default function Navbar({
   );
 }
 
-```
+`
 
 ================================================================================
 📁 ملف: src/components/Dashboard.jsx
 ================================================================================
-```javascript
+`jsx
 import React, { useState } from 'react';
 import { 
   Search, 
@@ -1763,7 +2725,8 @@ export default function Dashboard({
   onDeleteProject,
   onRestoreDefaultProjects,
   onAddNewProject,
-  onOpenFirebase
+  onOpenFirebase,
+  isAdmin = false
 }) {
   const isAr = lang === 'ar';
   const Arrow = isAr ? ArrowLeft : ArrowRight;
@@ -2204,7 +3167,7 @@ export default function Dashboard({
               </span>
             </h3>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {projects.length < 3 && onRestoreDefaultProjects && (
+              {isAdmin && projects.length < 3 && onRestoreDefaultProjects && (
                 <button 
                   className="btn-secondary" 
                   style={{ fontSize: '0.78rem', padding: '5px 10px', display: 'flex', alignItems: 'center', gap: '4px' }}
@@ -2215,7 +3178,7 @@ export default function Dashboard({
                   <span>{isAr ? 'استعادة النماذج' : 'Restore Samples'}</span>
                 </button>
               )}
-              {onOpenFirebase && (
+              {isAdmin && onOpenFirebase && (
                 <button 
                   className="btn-secondary" 
                   style={{ 
@@ -2597,15 +3560,15 @@ export default function Dashboard({
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 9999,
-          padding: '20px'
+          padding: 'clamp(10px, 3vw, 20px)'
         }}>
           <div style={{
             background: '#ffffff',
             borderRadius: '16px',
-            padding: '28px',
+            padding: 'clamp(16px, 4vw, 28px)',
             maxWidth: '560px',
             width: '100%',
-            maxHeight: '90vh',
+            maxHeight: '92dvh',
             overflowY: 'auto',
             boxShadow: '0 20px 40px rgba(0, 0, 0, 0.25)',
             border: '1px solid #cbd5e1',
@@ -2641,7 +3604,7 @@ export default function Dashboard({
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="grid-2" style={{ gap: '12px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                     {isAr ? 'نوع الإشغال الرئيسي:' : 'Occupancy Type:'}
@@ -2674,7 +3637,7 @@ export default function Dashboard({
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="grid-2" style={{ gap: '12px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                     {isAr ? 'الأدوار فوق الأرض:' : 'Above Ground Floors:'}
@@ -2704,7 +3667,7 @@ export default function Dashboard({
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="grid-2" style={{ gap: '12px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                     {isAr ? 'مساحة الدور (م²):' : 'Floor Area (m²):'}
@@ -2768,12 +3731,12 @@ export default function Dashboard({
   );
 }
 
-```
+`
 
 ================================================================================
 📁 ملف: src/components/ProjectAssessment.jsx
 ================================================================================
-```javascript
+`jsx
 import React, { useState, useEffect } from 'react';
 import { 
   Building2, 
@@ -2909,6 +3872,36 @@ export default function ProjectAssessment({
       runAssessment(initialQuery);
     }
   }, [initialQuery]);
+
+  // Synchronize form and re-run assessment when selectedProject changes
+  useEffect(() => {
+    if (selectedProject) {
+      const desc = selectedProject.descriptionAr || selectedProject.name || '';
+      setDescriptionInput(desc);
+      const newForm = {
+        occupancyType: selectedProject.facts?.occupancyType || 'commercial',
+        subgroupCode: selectedProject.facts?.subgroupCode || selectedProject.facts?.occupancySubgroup || 'هـ-١',
+        aboveGroundFloors: selectedProject.facts?.aboveGroundFloors || 6,
+        basementFloors: selectedProject.facts?.basementFloors !== undefined ? selectedProject.facts.basementFloors : 1,
+        basementUse: selectedProject.facts?.basementUse || 'parking',
+        floorArea: Number(selectedProject.facts?.floorArea) || 1200,
+        buildingHeight: Number(selectedProject.facts?.buildingHeight) || 24,
+        occupantLoad: selectedProject.facts?.occupantLoadEstimated || 1400,
+        hasSprinklers: 'proposed',
+        location: selectedProject.facts?.location || (isAr ? 'القاهرة الجديدة' : 'New Cairo')
+      };
+      setFormData(newForm);
+      if (desc) {
+        runAssessment(desc);
+      } else {
+        const res = assessProjectAgainstCode({
+          ...selectedProject.facts,
+          ...newForm
+        });
+        setAssessmentResult(res);
+      }
+    }
+  }, [selectedProject?.id]);
 
   const handleDescriptionSubmit = (e) => {
     e.preventDefault();
@@ -3542,12 +4535,12 @@ export default function ProjectAssessment({
   );
 }
 
-```
+`
 
 ================================================================================
 📁 ملف: src/components/CodeLibrary.jsx
 ================================================================================
-```javascript
+`jsx
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { 
   Search, 
@@ -3662,11 +4655,44 @@ export default function CodeLibrary({ lang, onOpenAssistant }) {
   };
   const activeFontSize = fontSizes[fontSizeLevel];
 
-  // Copy handler
+  // Stable, unique key for articles that survives filtering and search
+  const getArticleKey = (chapterId, art, idx) => {
+    if (art?.id) return art.id;
+    const num = (art?.articleNum || '').replace(/\s+/g, '-');
+    const page = art?.page || idx;
+    return `${chapterId || 'ch'}-${num}-${page}`;
+  };
+
+  // Safe clipboard copy handler with fallback
   const handleCopy = (text, id) => {
-    navigator.clipboard.writeText(text);
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(() => {
+          fallbackCopyText(text);
+        });
+      } else {
+        fallbackCopyText(text);
+      }
+    } catch {
+      fallbackCopyText(text);
+    }
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2200);
+  };
+
+  const fallbackCopyText = (text) => {
+    try {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    } catch (err) {
+      console.warn("Fallback copy failed:", err);
+    }
   };
 
   // Bookmark toggle
@@ -3694,12 +4720,15 @@ export default function CodeLibrary({ lang, onOpenAssistant }) {
     });
   }, [selectedEditionFilter, selectedDocFilter, searchQuery]);
 
-  // Filter articles in current chapter
+  // Filter articles in current chapter using stable articleKey
   const currentArticles = useMemo(() => {
     if (!currentChapter || !currentChapter.articles) return [];
     let list = currentChapter.articles;
     if (showOnlyBookmarks) {
-      list = list.filter((_, idx) => bookmarkedArticleIds.includes(`${currentChapter.id}-${idx}`));
+      list = list.filter((art, idx) => {
+        const key = getArticleKey(currentChapter.id, art, idx);
+        return bookmarkedArticleIds.includes(key);
+      });
     }
     if (chapterFilterQuery.trim()) {
       const q = chapterFilterQuery.toLowerCase();
@@ -3899,7 +4928,7 @@ export default function CodeLibrary({ lang, onOpenAssistant }) {
       {/* VIEW 1: FULL CODE FREE READER (وضع التصفح الحر الكامل)   */}
       {/* ========================================================= */}
       {activeTab === 'reader' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '20px', alignItems: 'start' }}>
+        <div className="code-library-layout">
           
           {/* RIGHT SIDEBAR: VOLUMES & CHAPTERS TREE NAVIGATOR */}
           <div style={{
@@ -4274,12 +5303,12 @@ export default function CodeLibrary({ lang, onOpenAssistant }) {
                 </div>
               ) : (
                 currentArticles.map((art, idx) => {
-                  const articleKey = `${currentChapter?.id}-${idx}`;
+                  const articleKey = getArticleKey(currentChapter?.id, art, idx);
                   const isBookmarked = bookmarkedArticleIds.includes(articleKey);
                   return (
                     <div 
-                      key={idx}
-                      id={`article-${idx}`}
+                      key={articleKey}
+                      id={`article-${articleKey}`}
                       style={{
                         background: '#ffffff',
                         borderRadius: '16px',
@@ -4908,12 +5937,12 @@ export default function CodeLibrary({ lang, onOpenAssistant }) {
   );
 }
 
-```
+`
 
 ================================================================================
 📁 ملف: src/components/EngineeringCalculators.jsx
 ================================================================================
-```javascript
+`jsx
 import React, { useState, useMemo } from 'react';
 import { 
   Calculator, 
@@ -5106,6 +6135,7 @@ export default function EngineeringCalculators({ lang, selectedProject, onOpenAs
   const [doorWidthMeters, setDoorWidthMeters] = useState(1.0);
   const [doorHeightMeters, setDoorHeightMeters] = useState(2.1);
   const [injectionType, setInjectionType] = useState('multiple'); // 'single' | 'multiple'
+  const [basementArea, setBasementArea] = useState(selectedProject?.facts?.floorArea || 1200);
 
   const smokeResults = useMemo(() => {
     // Egyptian Fire Code 305/1 & 305/3:
@@ -5117,14 +6147,21 @@ export default function EngineeringCalculators({ lang, selectedProject, onOpenAs
     const targetDoorVelocityMps = 1.0; 
 
     // Airflow through open doors: Q_doors = N_doors * Area * Velocity
-    const singleDoorAreaM2 = doorWidthMeters * doorHeightMeters;
-    const totalOpenDoorAreaM2 = numOpenDoors * singleDoorAreaM2;
+    const safeDoorW = Math.max(0.8, doorWidthMeters || 1.0);
+    const safeDoorH = Math.max(1.8, doorHeightMeters || 2.1);
+    const safeNumOpen = Math.max(1, numOpenDoors || 2);
+    const safeStories = Math.max(2, numStories || 7);
+    const safeStoryH = Math.max(2.5, storyHeightMeters || 3.2);
+    const totalStairHeight = Math.round(safeStories * safeStoryH * 10) / 10;
+
+    const singleDoorAreaM2 = safeDoorW * safeDoorH;
+    const totalOpenDoorAreaM2 = safeNumOpen * singleDoorAreaM2;
     const flowThroughDoorsM3s = totalOpenDoorAreaM2 * targetDoorVelocityMps; // m3/s
     const flowThroughDoorsCfm = flowThroughDoorsM3s * 2118.88;
 
     // Air leakage through closed doors & building envelope:
     // Each closed stair door leaks approx 150 - 250 CFM @ 50 Pa with standard seals
-    const numClosedDoors = Math.max(0, numStories - numOpenDoors);
+    const numClosedDoors = Math.max(0, safeStories - safeNumOpen);
     const leakagePerDoorCfm = 180;
     const totalClosedDoorsLeakageCfm = numClosedDoors * leakagePerDoorCfm;
 
@@ -5134,8 +6171,14 @@ export default function EngineeringCalculators({ lang, selectedProject, onOpenAs
     const totalFanCapacityCfm = Math.round(subtotalCfm * safetyFactor);
     const totalFanCapacityM3h = Math.round(totalFanCapacityCfm * 1.69901);
 
-    // Fan static pressure required (50 Pa stairwell + approx 150-250 Pa ductwork & dampers)
-    const fanStaticPressurePa = Math.round(designDeltaP + 200);
+    // Dynamic Fan static pressure:
+    // In multiple injection shafts: balanced ductwork (~180 Pa duct loss + 50 Pa deltaP = 230 Pa)
+    // In single injection points: stack effect and friction require higher head (~260 Pa duct loss + 50 Pa deltaP = 310 Pa)
+    const ductFrictionPa = injectionType === 'single' ? 260 : 180;
+    const fanStaticPressurePa = Math.round(designDeltaP + ductFrictionPa);
+
+    // Code recommendation check: single injection is only suitable for <= 15m (approx 4-5 floors)
+    const singleInjectionWarning = injectionType === 'single' && totalStairHeight > 15;
 
     // Fan Motor kW estimation: (CFM * SP in inches w.g.) / (6356 * fanEff)
     const spInchesWater = fanStaticPressurePa / 249.0889;
@@ -5144,14 +6187,16 @@ export default function EngineeringCalculators({ lang, selectedProject, onOpenAs
     const fanMotorKw = Math.round(fanMotorHP * 0.746 * 10) / 10;
 
     // Basement Parking Smoke Exhaust requirement (10 Air Changes per Hour - ACH)
-    const basementAreaM2 = floorArea || 1200;
-    const basementVolumeM3 = basementAreaM2 * 3.0; // 3m clear height
+    const safeBasementArea = Math.max(50, basementArea || 1200);
+    const basementVolumeM3 = safeBasementArea * 3.0; // 3m clear height
     const smokeExhaustM3h = Math.round(basementVolumeM3 * 10);
     const smokeExhaustCfm = Math.round(smokeExhaustM3h / 1.69901);
 
     return {
       designDeltaP,
       targetDoorVelocityMps,
+      totalStairHeight,
+      singleInjectionWarning,
       totalOpenDoorAreaM2: totalOpenDoorAreaM2.toFixed(2),
       flowThroughDoorsCfm: Math.round(flowThroughDoorsCfm),
       totalClosedDoorsLeakageCfm: Math.round(totalClosedDoorsLeakageCfm),
@@ -5163,7 +6208,7 @@ export default function EngineeringCalculators({ lang, selectedProject, onOpenAs
       smokeExhaustCfm,
       smokeExhaustM3h
     };
-  }, [numStories, storyHeightMeters, numOpenDoors, doorWidthMeters, doorHeightMeters, injectionType, floorArea]);
+  }, [numStories, storyHeightMeters, numOpenDoors, doorWidthMeters, doorHeightMeters, injectionType, basementArea]);
 
   // Copy Calculation Sheet formatted for Egyptian official records
   const handleCopyNote = () => {
@@ -5240,9 +6285,34 @@ export default function EngineeringCalculators({ lang, selectedProject, onOpenAs
 `;
     }
 
-    navigator.clipboard.writeText(noteText);
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(noteText).catch(() => {
+          fallbackCopyText(noteText);
+        });
+      } else {
+        fallbackCopyText(noteText);
+      }
+    } catch {
+      fallbackCopyText(noteText);
+    }
     setCopiedNote(true);
     setTimeout(() => setCopiedNote(false), 2500);
+  };
+
+  const fallbackCopyText = (text) => {
+    try {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    } catch (e) {
+      console.warn("Fallback copy failed", e);
+    }
   };
 
   // Sync inputs from active project if available
@@ -5445,7 +6515,7 @@ export default function EngineeringCalculators({ lang, selectedProject, onOpenAs
       {/* TAB 1: WATER TANK & PUMPS CALCULATOR */}
       {/* ========================================================= */}
       {activeCalc === 'tank_pump' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1fr) minmax(380px, 1.25fr)', gap: '20px' }}>
+        <div className="calc-responsive-grid">
           {/* Inputs Column */}
           <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>
@@ -5564,7 +6634,7 @@ export default function EngineeringCalculators({ lang, selectedProject, onOpenAs
           {/* Results Column with Diagrams */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Quick Stat Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+            <div className="calc-stat-cards">
               <div className="card" style={{ padding: '14px', borderLeft: isAr ? 'none' : '4px solid #0284c7', borderRight: isAr ? '4px solid #0284c7' : 'none' }}>
                 <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>{isAr ? 'معدل التدفق الكلي' : 'Total Flow Rate'}</span>
                 <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0284c7', marginTop: '2px' }}>
@@ -5696,7 +6766,7 @@ export default function EngineeringCalculators({ lang, selectedProject, onOpenAs
       {/* TAB 2: EGRESS & STAIR SIZING CALCULATOR */}
       {/* ========================================================= */}
       {activeCalc === 'egress_stairs' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1fr) minmax(380px, 1.25fr)', gap: '20px' }}>
+        <div className="calc-responsive-grid">
           {/* Inputs Column */}
           <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>
@@ -5795,7 +6865,7 @@ export default function EngineeringCalculators({ lang, selectedProject, onOpenAs
           {/* Results Column with Architectural Section */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Quick Stat Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+            <div className="calc-stat-cards">
               <div className="card" style={{ padding: '14px', borderLeft: isAr ? 'none' : '4px solid #16a34a', borderRight: isAr ? '4px solid #16a34a' : 'none' }}>
                 <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>{isAr ? 'عرض السلم الصافي المعتمد' : 'Required Stair Width'}</span>
                 <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#16a34a', marginTop: '2px' }}>
@@ -5932,7 +7002,7 @@ export default function EngineeringCalculators({ lang, selectedProject, onOpenAs
       {/* TAB 3: STAIRWELL PRESSURIZATION & SMOKE CONTROL */}
       {/* ========================================================= */}
       {activeCalc === 'smoke_pressurization' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1fr) minmax(380px, 1.25fr)', gap: '20px' }}>
+        <div className="calc-responsive-grid">
           {/* Inputs Column */}
           <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>
@@ -6053,12 +7123,41 @@ export default function EngineeringCalculators({ lang, selectedProject, onOpenAs
                 <option value="single">{isAr ? 'حقن نقطي مباشر في أعلى أو أسفل السلم (للمباني الصغيرة ≤ ٤ أدوار)' : 'Single Injection (Small buildings ≤ 4 floors)'}</option>
               </select>
             </div>
+
+            {/* Dedicated Basement Garage Floor Area Input */}
+            <div>
+              <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>
+                {isAr ? 'مسطح بدروم الجراج لسحب الدخان (م²):' : 'Basement Garage Floor Area (m²):'}
+              </label>
+              <input 
+                type="number" 
+                value={basementArea}
+                onChange={(e) => setBasementArea(Math.max(50, Number(e.target.value) || 0))}
+                min={50}
+                max={50000}
+                step={50}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.86rem' }}
+              />
+              <span style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                {isAr ? '* الكود المصري يشترط ١٠ مرات تغيير هواء/ساعة لجراجات السيارات مع استقلالية تامة عن حسابات الخزان.' : '* 10 ACH exhaust required by Code 305/2, calculated independently from tank area.'}
+              </span>
+            </div>
+
+            {/* Single injection warning if height > 15m */}
+            {smokeResults.singleInjectionWarning && (
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '10px 12px', fontSize: '0.78rem', color: '#991b1b', lineHeight: 1.5 }}>
+                ⚠️ <strong>{isAr ? 'تنبيه كودي (كود ٣٠٥/١ و ٣٠٥/٣): ' : 'Code Advisory: '}</strong>
+                {isAr 
+                  ? `ارتفاع السلم الإجمالي (${smokeResults.totalStairHeight} م) يتجاوز ١٥ متراً. يُلزم الكود باستخدام نظام الحقن المتعدد (Multiple Injection) لتفادي اختلال توزيع الضغط وانهياره بالأدوار العليا.`
+                  : `Stair height (${smokeResults.totalStairHeight}m) exceeds 15m. Multiple injection points required by code to prevent pressure drop on upper floors.`}
+              </div>
+            )}
           </div>
 
           {/* Results Column with Pressurization Schematic */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Quick Stat Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+            <div className="calc-stat-cards">
               <div className="card" style={{ padding: '14px', borderLeft: isAr ? 'none' : '4px solid #16a34a', borderRight: isAr ? '4px solid #16a34a' : 'none' }}>
                 <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>{isAr ? 'فرق الضغط الكودي' : 'Design Pressure Delta'}</span>
                 <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#16a34a', marginTop: '2px' }}>
@@ -6179,12 +7278,12 @@ export default function EngineeringCalculators({ lang, selectedProject, onOpenAs
   );
 }
 
-```
+`
 
 ================================================================================
 📁 ملف: src/components/RejectionsAndInterpretations.jsx
 ================================================================================
-```javascript
+`jsx
 import React, { useState } from 'react';
 import { 
   AlertTriangle, 
@@ -6229,35 +7328,35 @@ export default function RejectionsAndInterpretations({
   const [activeSubTab, setActiveSubTab] = useState('rejections');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedInterp, setExpandedInterp] = useState(null);
+  const [expandedInterp, setExpandedInterp] = useState(CODE_INTERPRETATIONS[0]?.id || null);
   const [expandedFaq, setExpandedFaq] = useState(null);
 
-  // Filter rejections
+  // Filter rejections with safe optional chaining
   const filteredRejections = COMMON_REJECTIONS.filter(item => {
     const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
     const matchesSearch = !searchQuery.trim() || 
-      item.titleAr.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.titleEn.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.authorityNoteAr.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.codeClauseAr.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
+      item.titleAr?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.titleEn?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.authorityNoteAr?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.codeClauseAr?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.tags?.some(t => t?.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesCategory && matchesSearch;
   });
 
-  // Filter interpretations
+  // Filter interpretations with safe optional chaining
   const filteredInterpretations = CODE_INTERPRETATIONS.filter(item => {
     return !searchQuery.trim() ||
-      item.topicAr.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.questionAr.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.officialRulingAr.toLowerCase().includes(searchQuery.toLowerCase());
+      item.topicAr?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.questionAr?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.officialRulingAr?.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
-  // Filter FAQs
+  // Filter FAQs with safe optional chaining
   const filteredFaqs = FREQUENTLY_ASKED_QUESTIONS.filter(item => {
     return !searchQuery.trim() ||
-      item.qAr.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.aAr.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.tag.toLowerCase().includes(searchQuery.toLowerCase());
+      item.qAr?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.aAr?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.tag?.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
   const handleAskAIAboutItem = (item) => {
@@ -6715,7 +7814,7 @@ export default function RejectionsAndInterpretations({
 
                     {onSwitchTab && (
                       <button
-                        onClick={() => onSwitchTab('assessment')}
+                        onClick={() => onSwitchTab('assessment', { fromRejection: item.id, itemTitle: item.titleAr, category: item.category })}
                         style={{
                           background: '#f8fafc',
                           color: '#0f172a',
@@ -6771,7 +7870,7 @@ export default function RejectionsAndInterpretations({
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             {filteredInterpretations.map((interp, index) => {
-              const isExpanded = expandedInterp === interp.id || index === 0;
+              const isExpanded = expandedInterp === interp.id;
               return (
                 <div 
                   key={interp.id}
@@ -6845,7 +7944,7 @@ export default function RejectionsAndInterpretations({
                           <span>{isAr ? 'التفسير والقرار الهندسي المعتمد:' : 'Official Engineering Ruling:'}</span>
                         </div>
                         <p style={{ margin: 0, color: '#1e3a8a', lineHeight: 1.6 }}>
-                          {isAr ? interp.officialRulingAr : interp.questionEn}
+                          {isAr ? interp.officialRulingAr : (interp.officialRulingEn || interp.officialRulingAr)}
                         </p>
                       </div>
 
@@ -7001,12 +8100,12 @@ export default function RejectionsAndInterpretations({
   );
 }
 
-```
+`
 
 ================================================================================
 📁 ملف: src/components/OfflineModeModal.jsx
 ================================================================================
-```javascript
+`jsx
 import React, { useState, useEffect } from 'react';
 import { 
   Wifi, 
@@ -7044,28 +8143,32 @@ export default function OfflineModeModal({
       color: '#2563eb',
       titleAr: 'تصفح الكود المصري ٣٠٥ والقرار ٢٥٥/٢٠٢٦',
       titleEn: 'Full Egyptian Fire Code 305 & Decree 255/2026',
-      descAr: 'جميع نصوص الأجزاء الثلاثة (البنائية، الميكانيكية، الكهربائية) مخزنة محلياً بالكامل ومفهرسة للبحث برقم البند بدون نت.'
+      descAr: 'جميع نصوص الأجزاء الثلاثة (البنائية، الميكانيكية، الكهربائية) مخزنة محلياً بالكامل ومفهرسة للبحث برقم البند بدون نت.',
+      descEn: 'All three parts (Architectural, Mechanical, Electrical) are bundled locally and indexed for clause lookups without an internet connection.'
     },
     {
       icon: Calculator,
       color: '#dc2626',
       titleAr: 'الحاسبات الهندسية التفاعلية اللحظية',
       titleEn: 'Interactive Real-Time Engineering Calculators',
-      descAr: 'حساب سعات خزانات مياه الحريق، تدفق الـ GPM، قدرات طلمبات الديزل والكهرباء، عروض السلالم (٧٫٦ مم)، ومراوح الضغط وسحب الدخان.'
+      descAr: 'حساب سعات خزانات مياه الحريق، تدفق الـ GPM، قدرات طلمبات الديزل والكهرباء، عروض السلالم (٧٫٦ مم)، ومراوح الضغط وسحب الدخان.',
+      descEn: 'Hydraulic calculations for water tanks, GPM demand, diesel/electric pumps, staircase widths (7.6 mm/person), and stair pressurization.'
     },
     {
       icon: FileCheck2,
       color: '#059669',
       titleAr: 'فحص وتقييم المشاريع والارتفاعات',
-      titleEn: 'Project Assessment & Height Verification (16m / 22m)',
-      descAr: 'تحديد اشتراطات الارتفاع، مسالك الهروب، وحسابات حمولة الإشغال ومسافات الارتحال تعمل بمحرك خوارزمي محلي سريع.'
+      titleEn: 'Project Assessment & Height Verification',
+      descAr: 'تحديد اشتراطات الارتفاع، مسالك الهروب، وحسابات حمولة الإشغال ومسافات الارتحال تعمل بمحرك خوارزمي محلي سريع.',
+      descEn: 'Evaluate building heights (16m residential / 22m non-residential thresholds), travel distances, and occupant loads via high-speed client-side algorithms.'
     },
     {
       icon: HardDrive,
       color: '#d97706',
-      titleAr: 'الحفظ المحلي التلقائي الدائم (Local Storage)',
-      titleEn: 'Persistent Local Device Storage',
-      descAr: 'تُحفظ كافة بيانات مشاريعك ومسوداتك وتقاريرك محلياً على جهازك، وتتزامن تلقائياً مع السحابة فور عودة الإنترنت.'
+      titleAr: 'التخزين المحلي على ذاكرة الجهاز (LocalStorage)',
+      titleEn: 'Device Browser Storage (LocalStorage)',
+      descAr: 'تُحفظ كافة بيانات مشاريعك ومسوداتك وتقاريرك محلياً في ذاكرة متصفحك. يوصى بالمزامنة السحابية أو تصدير ملف للحفظ الدائم.',
+      descEn: 'Projects, calculations, and drafts persist in your local browser storage. Use cloud sync or file export for permanent disaster-proof archival.'
     }
   ];
 
@@ -7083,19 +8186,20 @@ export default function OfflineModeModal({
       backgroundColor: 'rgba(5, 11, 24, 0.88)',
       backdropFilter: 'blur(12px)',
       WebkitBackdropFilter: 'blur(12px)',
-      padding: '20px',
+      padding: 'clamp(8px, 2.5vw, 20px)',
       overflowY: 'auto'
     }}>
       <div style={{
         position: 'relative',
         width: '100%',
         maxWidth: '720px',
+        maxHeight: '94dvh',
         background: '#ffffff',
         border: '1.5px solid #e2e8f0',
         borderRadius: '24px',
         boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.5)',
         color: '#0f172a',
-        overflow: 'hidden',
+        overflowY: 'auto',
         display: 'flex',
         flexDirection: 'column'
       }}>
@@ -7205,12 +8309,54 @@ export default function OfflineModeModal({
                     {isAr ? feat.titleAr : feat.titleEn}
                   </h4>
                   <p style={{ margin: '4px 0 0 0', fontSize: '0.78rem', color: '#64748b', lineHeight: 1.4 }}>
-                    {isAr ? feat.descAr : feat.descAr}
+                    {isAr ? feat.descAr : feat.descEn}
                   </p>
                 </div>
               </div>
             ))}
           </div>
+
+          {/* Optional Field Mode Quick Toggle */}
+          {onToggleFieldMode && (
+            <div style={{
+              background: '#f8fafc',
+              border: '1px solid #cbd5e1',
+              borderRadius: '14px',
+              padding: '12px 18px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px'
+            }}>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: '0.86rem', color: '#0f172a' }}>
+                  {isAr ? '⚡ تفعيل الوضع الميداني السريع (Field Mode):' : '⚡ Enable Field Inspection Mode:'}
+                </div>
+                <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                  {isAr 
+                    ? 'يُقلل المؤثرات البصرية ويركز على الحاسبات السريعة واختبارات الموقع للبدرومات ومواقع الإنشاء.'
+                    : 'Streamlines UI animations and focuses on essential job-site calculators and offline review.'}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={onToggleFieldMode}
+                style={{
+                  background: isFieldMode ? '#16a34a' : '#64748b',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '6px 14px',
+                  borderRadius: '20px',
+                  fontSize: '0.78rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  transition: 'background 0.2s ease'
+                }}
+              >
+                {isFieldMode ? (isAr ? 'مفعل ✔️' : 'Active ✔️') : (isAr ? 'تعطيل' : 'Off')}
+              </button>
+            </div>
+          )}
 
           {/* Standalone File Direct Access */}
           <div style={{
@@ -7246,8 +8392,8 @@ export default function OfflineModeModal({
                 </div>
                 <div style={{ fontSize: '0.76rem', color: '#94a3b8' }}>
                   {isAr 
-                    ? 'Egyptian_Fire_Code_Complete_SingleFile.html (حوالي 1.3 ميجابايت يفتح دبل كليك في أي متصفح)' 
-                    : 'Self-contained 1.3MB HTML file that opens anywhere offline.'}
+                    ? 'Egyptian_Fire_Code_Complete_SingleFile.html (حوالي 1.45 ميجابايت مدمج بالكامل ويفتح مباشرة في أي متصفح)' 
+                    : 'Self-contained 1.45MB HTML bundle that opens directly in any browser.'}
                 </div>
               </div>
             </div>
@@ -7331,12 +8477,12 @@ export default function OfflineModeModal({
   );
 }
 
-```
+`
 
 ================================================================================
 📁 ملف: src/components/SplashScreen.jsx
 ================================================================================
-```javascript
+`jsx
 import React, { useState } from 'react';
 import { 
   ShieldCheck, 
@@ -7417,12 +8563,13 @@ export default function SplashScreen({
         position: 'relative',
         width: '100%',
         maxWidth: '940px',
+        maxHeight: '92dvh',
         background: 'linear-gradient(165deg, #0f172a 0%, #090d16 100%)',
         border: '1px solid rgba(249, 115, 22, 0.3)',
         borderRadius: '24px',
         boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 40px rgba(239, 68, 68, 0.2)',
         color: '#f8fafc',
-        overflow: 'hidden',
+        overflowY: 'auto',
         display: 'flex',
         flexDirection: 'column'
       }}>
@@ -7433,7 +8580,11 @@ export default function SplashScreen({
           justifyContent: 'space-between',
           padding: '16px 24px',
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-          background: 'rgba(255, 255, 255, 0.02)'
+          background: 'rgba(255, 255, 255, 0.02)',
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
+          backdropFilter: 'blur(8px)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{
@@ -7481,11 +8632,8 @@ export default function SplashScreen({
         </div>
 
         {/* Content Body Grid */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(320px, 1fr) minmax(340px, 1.15fr)',
-          gap: '24px',
-          padding: '28px',
+        <div className="splash-modal-grid" style={{
+          padding: 'clamp(14px, 3vw, 28px)',
           alignItems: 'center'
         }}>
           {/* Left Column: Fire Triangle Visual Graphic */}
@@ -7789,7 +8937,7 @@ export default function SplashScreen({
             {/* Quick Feature Badges */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))',
               gap: '8px',
               fontSize: '0.72rem'
             }}>
@@ -7882,15 +9030,16 @@ export default function SplashScreen({
   );
 }
 
-```
+`
 
 ================================================================================
 📁 ملف: src/components/DrawingReview.jsx
 ================================================================================
-```javascript
-import React, { useState, useRef } from 'react';
+`jsx
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Upload, 
+  Camera,
   AlertTriangle, 
   ZoomIn, 
   ZoomOut, 
@@ -7904,10 +9053,23 @@ import {
   Car,
   FileCheck
 } from 'lucide-react';
+import { toLatinDigits } from '../services/assessmentEngine';
 
 export default function DrawingReview({ lang, onApplyExtractedFacts }) {
   const isAr = lang === 'ar';
   const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
+  const createdUrlsRef = useRef([]);
+  const [mobileTab, setMobileTab] = useState('canvas'); // 'canvas' | 'facts' | 'files'
+
+  // Revoke object URLs on component unmount
+  useEffect(() => {
+    return () => {
+      createdUrlsRef.current.forEach(u => {
+        try { URL.revokeObjectURL(u); } catch {}
+      });
+    };
+  }, []);
 
   // Initial drawings repository
   const [files, setFiles] = useState([
@@ -8082,7 +9244,7 @@ export default function DrawingReview({ lang, onApplyExtractedFacts }) {
     setLayersVisibility(prev => ({ ...prev, [layerKey]: !prev[layerKey] }));
   };
 
-  // Handle Drag & Pan in Viewport
+  // Handle Drag & Pan in Viewport (Mouse)
   const handleMouseDown = (e) => {
     setIsDragging(true);
     setDragStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
@@ -8110,20 +9272,102 @@ export default function DrawingReview({ lang, onApplyExtractedFacts }) {
     setIsDragging(false);
   };
 
+  // Multi-Touch Gestures for Mobile (Android & iOS): Single-finger Pan & Two-finger Pinch-to-Zoom
+  const touchRef = useRef({
+    isPinching: false,
+    startDist: 0,
+    startZoom: 100,
+    startX: 0,
+    startY: 0,
+    startPanX: 0,
+    startPanY: 0
+  });
+
+  const getTouchDist = (t1, t2) => {
+    const dx = t1.clientX - t2.clientX;
+    const dy = t1.clientY - t2.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  const handleTouchStart = (e) => {
+    if (e.touches.length === 1) {
+      // 1-Finger Pan
+      const t = e.touches[0];
+      touchRef.current.isPinching = false;
+      touchRef.current.startX = t.clientX;
+      touchRef.current.startY = t.clientY;
+      touchRef.current.startPanX = panOffset.x;
+      touchRef.current.startPanY = panOffset.y;
+      setIsDragging(true);
+    } else if (e.touches.length === 2) {
+      // 2-Finger Pinch Zoom
+      touchRef.current.isPinching = true;
+      touchRef.current.startDist = getTouchDist(e.touches[0], e.touches[1]);
+      touchRef.current.startZoom = zoomLevel;
+      setIsDragging(false);
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (e.touches.length === 1 && !touchRef.current.isPinching) {
+      const t = e.touches[0];
+      const dx = t.clientX - touchRef.current.startX;
+      const dy = t.clientY - touchRef.current.startY;
+      setPanOffset({
+        x: touchRef.current.startPanX + dx,
+        y: touchRef.current.startPanY + dy
+      });
+
+      const rect = e.currentTarget.getBoundingClientRect();
+      const relX = ((t.clientX - rect.left) / rect.width) * 40.0;
+      const relY = ((rect.bottom - t.clientY) / rect.height) * 30.0;
+      setCursorPos({
+        x: Math.max(0, Math.min(40, relX)).toFixed(2),
+        y: Math.max(0, Math.min(30, relY)).toFixed(2)
+      });
+    } else if (e.touches.length === 2) {
+      const currentDist = getTouchDist(e.touches[0], e.touches[1]);
+      if (touchRef.current.startDist > 0) {
+        const scaleFactor = currentDist / touchRef.current.startDist;
+        const newZoom = Math.min(250, Math.max(50, Math.round(touchRef.current.startZoom * scaleFactor)));
+        setZoomLevel(newZoom);
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    touchRef.current.isPinching = false;
+  };
+
   // Upload Processor for CAD Files (DWG / DXF / PDF / Images)
   const processUploadedFile = (file) => {
     if (!file) return;
 
-    setIsAnalyzing(true);
+    const MAX_SIZE = 35 * 1024 * 1024; // 35 MB
+    if (file.size > MAX_SIZE) {
+      alert(isAr ? 'حجم الملف يتجاوز الحد الأقصى المسموح به (35 ميجابايت).' : 'File size exceeds maximum allowed 35 MB.');
+      return;
+    }
+
     const fileName = file.name;
     const lowerName = fileName.toLowerCase();
     const isDwg = lowerName.endsWith('.dwg') || lowerName.endsWith('.dxf');
     const isPdf = lowerName.endsWith('.pdf');
     const isImage = file.type.startsWith('image/');
+    const isValidExt = isDwg || isPdf || isImage || lowerName.endsWith('.png') || lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg') || lowerName.endsWith('.svg');
+
+    if (!isValidExt) {
+      alert(isAr ? 'صيغة الملف غير مدعومة. يرجى اختيار ملف CAD (DWG / DXF) أو PDF أو صورة للمخطط.' : 'Unsupported format. Please upload CAD (DWG/DXF), PDF, or drawing image.');
+      return;
+    }
+
+    setIsAnalyzing(true);
 
     let imageUrl = null;
     if (isImage) {
       imageUrl = URL.createObjectURL(file);
+      createdUrlsRef.current.push(imageUrl);
     }
 
     // Intelligent Occupancy & Geometry Parser
@@ -8288,25 +9532,84 @@ export default function DrawingReview({ lang, onApplyExtractedFacts }) {
           </p>
         </div>
 
-        {/* Upload Trigger Button */}
-        <div>
+        {/* Upload Trigger Buttons (CAD / PDF + Mobile Camera Photo) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <button 
             type="button"
             className="btn-primary" 
             onClick={() => fileInputRef.current?.click()}
-            style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', fontWeight: 700 }}
+            style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', fontWeight: 700, minHeight: '44px' }}
           >
             <Upload size={18} />
-            <span>{isAr ? 'رفع مخطط أوتوكاد جديد (DWG / DXF / PDF)' : 'Upload CAD File (DWG / DXF)'}</span>
+            <span>{isAr ? 'رفع مخطط أوتوكاد / PDF' : 'Upload CAD / PDF'}</span>
           </button>
+
+          <button 
+            type="button"
+            className="btn-secondary" 
+            onClick={() => cameraInputRef.current?.click()}
+            style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', fontWeight: 700, minHeight: '44px' }}
+            title={isAr ? 'التقاط صورة بالموقع من كاميرا الهاتف' : 'Take site photo with device camera'}
+          >
+            <Camera size={18} color="#dc2626" />
+            <span>{isAr ? 'التقاط صورة بالموقع 📷' : 'Take Photo 📷'}</span>
+          </button>
+
           <input 
             ref={fileInputRef}
             type="file" 
             onChange={handleFileInputChange} 
             style={{ display: 'none' }} 
-            accept=".dwg,.dxf,.pdf,.png,.jpg,.jpeg,.bmp" 
+            accept=".dwg,.dxf,.pdf,.png,.jpg,.jpeg,.bmp,image/*" 
+          />
+          <input 
+            ref={cameraInputRef}
+            type="file" 
+            accept="image/*"
+            capture="environment"
+            onChange={handleFileInputChange} 
+            style={{ display: 'none' }} 
           />
         </div>
+      </div>
+
+      {/* Simulation / Verification Notice */}
+      <div style={{
+        background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95))',
+        border: '1px solid rgba(245, 158, 11, 0.35)',
+        borderRadius: '12px',
+        padding: '12px 18px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '12px',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '1.2rem' }}>📐</span>
+          <div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#fef08a' }}>
+              {isAr ? 'محاكاة وفحص استرشادي تفاعلي لمخططات الحريق (Interactive CAD Compliance Simulation)' : 'Interactive CAD Compliance Simulation'}
+            </div>
+            <div style={{ fontSize: '0.76rem', color: '#cbd5e1' }}>
+              {isAr 
+                ? 'يوفر هذا القسم فحصاً استرشادياً تفاعلياً لطبقات ومتجهات الأوتوكاد ومسارات الارتحال والسلالم وفق الكود المصري ٢٠٢٦. يلزم الاعتماد النهائي بتوقيع المهندس النقابي المختص.'
+                : 'Provides interactive simulation of CAD vectors, travel paths, and egress sizing under Egyptian Code 2026. Official sign-off requires a licensed professional engineer.'}
+            </div>
+          </div>
+        </div>
+        <span style={{
+          background: 'rgba(245, 158, 11, 0.15)',
+          color: '#f59e0b',
+          border: '1px solid rgba(245, 158, 11, 0.3)',
+          padding: '4px 10px',
+          borderRadius: '999px',
+          fontSize: '0.72rem',
+          fontWeight: 700
+        }}>
+          {isAr ? 'بيئة فحص استرشادية معتمدة' : 'Verified Simulation Mode'}
+        </span>
       </div>
 
       {/* Analysis In-Progress Banner */}
@@ -8319,14 +9622,85 @@ export default function DrawingReview({ lang, onApplyExtractedFacts }) {
         </div>
       )}
 
+      {/* Mobile Workspace Tabs Switcher (Only visible on screens <= 900px) */}
+      <div className="drawing-mobile-tabs" style={{
+        display: 'none',
+        gap: '6px',
+        padding: '5px',
+        background: '#e2e8f0',
+        borderRadius: '12px',
+        width: '100%'
+      }}>
+        <button
+          type="button"
+          onClick={() => setMobileTab('canvas')}
+          style={{
+            flex: 1,
+            padding: '10px 8px',
+            borderRadius: '8px',
+            border: 'none',
+            fontSize: '0.82rem',
+            fontWeight: 800,
+            cursor: 'pointer',
+            minHeight: '44px',
+            background: mobileTab === 'canvas' ? '#0f172a' : 'transparent',
+            color: mobileTab === 'canvas' ? '#ffffff' : '#334155',
+            boxShadow: mobileTab === 'canvas' ? '0 2px 8px rgba(0,0,0,0.18)' : 'none',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          📐 {isAr ? 'المخطط الهندسي' : 'CAD Canvas'}
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileTab('facts')}
+          style={{
+            flex: 1,
+            padding: '10px 8px',
+            borderRadius: '8px',
+            border: 'none',
+            fontSize: '0.82rem',
+            fontWeight: 800,
+            cursor: 'pointer',
+            minHeight: '44px',
+            background: mobileTab === 'facts' ? '#0f172a' : 'transparent',
+            color: mobileTab === 'facts' ? '#ffffff' : '#334155',
+            boxShadow: mobileTab === 'facts' ? '0 2px 8px rgba(0,0,0,0.18)' : 'none',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          📋 {isAr ? 'البيانات والمطابقة' : 'Plan Facts'}
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileTab('files')}
+          style={{
+            flex: 1,
+            padding: '10px 8px',
+            borderRadius: '8px',
+            border: 'none',
+            fontSize: '0.82rem',
+            fontWeight: 800,
+            cursor: 'pointer',
+            minHeight: '44px',
+            background: mobileTab === 'files' ? '#0f172a' : 'transparent',
+            color: mobileTab === 'files' ? '#ffffff' : '#334155',
+            boxShadow: mobileTab === 'files' ? '0 2px 8px rgba(0,0,0,0.18)' : 'none',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          📁 {isAr ? `الملفات (${files.length})` : `Files (${files.length})`}
+        </button>
+      </div>
+
       {/* Main Grid: Left File List + Right CAD Blueprint Workspace */}
-      <div className="grid-2" style={{ gridTemplateColumns: '360px 1fr', gap: '20px' }}>
+      <div className="drawing-review-grid" data-mobile-tab={mobileTab}>
         
         {/* Left Column: Uploaded Files & Synchronized Detected Facts */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div className="drawing-left-col" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           
           {/* File Picker List */}
-          <div className="card" style={{ padding: '16px' }}>
+          <div className="card drawing-file-picker-card" style={{ padding: '16px' }}>
             <h3 style={{ fontSize: '0.96rem', fontWeight: 700, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Layers size={18} color="#2563eb" />
               {isAr ? 'الملفات والمخططات المرفوعة' : 'Uploaded Drawings & Files'}
@@ -8372,7 +9746,7 @@ export default function DrawingReview({ lang, onApplyExtractedFacts }) {
           </div>
 
           {/* Synchronized Detected Facts for the Active Drawing */}
-          <div className="card" style={{ padding: '18px' }}>
+          <div className="card drawing-facts-card" style={{ padding: '18px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
               <h3 style={{ fontSize: '0.94rem', fontWeight: 700, color: '#1e293b' }}>
                 {isAr ? 'البيانات المستخرجة آلياً' : 'Detected Plan Facts'}
@@ -8461,24 +9835,73 @@ export default function DrawingReview({ lang, onApplyExtractedFacts }) {
 
             {/* Verification & Compliance Note */}
             <div style={{ marginTop: '14px', padding: '10px 12px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.76rem', color: '#475569', lineHeight: 1.5 }}>
-              <strong>{isAr ? 'التدقيق الكودي المعتمد: ' : 'Code Verification: '}</strong>
+              <strong>{isAr ? 'التدقيق الكودي الاسترشادي: ' : 'Educational Simulation: '}</strong>
               {activeFile.limitations}
             </div>
 
             <button
-              onClick={() => onApplyExtractedFacts && onApplyExtractedFacts(activeFile.detectedFacts)}
+              onClick={() => {
+                if (!onApplyExtractedFacts) return;
+                const raw = activeFile.detectedFacts || {};
+                const extractNum = (val) => {
+                  if (!val) return undefined;
+                  const numStr = toLatinDigits(String(val)).replace(/[^\d.]/g, '');
+                  const parsed = parseFloat(numStr);
+                  return !isNaN(parsed) && parsed > 0 ? parsed : undefined;
+                };
+
+                const cleanArea = extractNum(raw.floorAreaDetected) || (activeFile.layoutType === 'basement' ? 1200 : 650);
+                const cleanStair = extractNum(raw.stairWidthValue) || 1.20;
+                const cleanDoor = extractNum(raw.doorWidthValue) || 0.90;
+                const cleanTravel = extractNum(raw.travelDistValue) || 35.0;
+
+                const payload = {
+                  ...raw,
+                  floorArea: cleanArea,
+                  stairWidth: cleanStair,
+                  doorWidth: cleanDoor,
+                  travelDistance: cleanTravel,
+                  aboveGroundFloors: activeFile.layoutType === 'basement' ? 1 : 6,
+                  basementFloors: activeFile.layoutType === 'basement' ? 1 : 0,
+                  basementUse: activeFile.layoutType === 'basement' ? 'parking' : 'none'
+                };
+
+                onApplyExtractedFacts(payload);
+              }}
               className="btn-secondary"
               style={{ width: '100%', marginTop: '14px', fontSize: '0.82rem', justifyContent: 'center' }}
             >
               <FileCheck size={14} style={{ display: 'inline', marginLeft: '6px' }} />
-              {isAr ? 'تأكيد ونقل البيانات لمحرك التقييم' : 'Confirm & Apply to Assessment'}
+              {isAr ? 'تأكيد ونقل البيانات الرقمية لمحرك التقييم' : 'Confirm & Apply Numeric Facts to Assessment'}
             </button>
           </div>
 
         </div>
 
         {/* Right Column: AutoCAD Model Space Canvas & Object Inspector */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div className="drawing-right-col" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          
+          {/* Engineering Honesty & Simulation Mode Notice */}
+          <div style={{
+            background: '#fffbeb',
+            border: '1px solid #fde68a',
+            borderRadius: '10px',
+            padding: '12px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            fontSize: '0.82rem',
+            color: '#92400e',
+            lineHeight: 1.5
+          }}>
+            <AlertTriangle size={20} style={{ flexShrink: 0, color: '#d97706' }} />
+            <div>
+              <strong>{isAr ? 'بيئة محاكاة وتدريب هندسي تفاعلي (Interactive CAD Simulation): ' : 'Interactive CAD Simulation Mode: '}</strong>
+              {isAr 
+                ? 'تعمل هذه الأداة كبيئة محاكاة رقمية توضيحية لربط المخططات ببنود الكود المصري ٢٠٢٦. ملفات DWG الثنائية المعقدة تتطلب عادةً خادم CAD متخصص لاستخراج الـ Entities الأصلية؛ القياسات ونسب المطابقة هنا استرشادية وتدريبية ولا تغني عن الاعتماد الهندسي المباشر.'
+                : 'This viewer operates as a demonstration and educational CAD simulation environment. Complex binary DWG extraction requires dedicated backend CAD converters; metrics and compliance overlays shown here are pedagogical references and do not replace certified manual engineer reviews.'}
+            </div>
+          </div>
           
           <div className="card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', background: '#0a0f1d', border: '1px solid #1e293b' }}>
             
@@ -8572,6 +9995,10 @@ export default function DrawingReview({ lang, onApplyExtractedFacts }) {
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              onTouchCancel={handleTouchEnd}
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -8586,6 +10013,7 @@ export default function DrawingReview({ lang, onApplyExtractedFacts }) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: isDragging ? 'grabbing' : 'crosshair',
+                touchAction: 'none',
                 backgroundImage: layersVisibility.grid 
                   ? 'linear-gradient(to right, #0f1c3f 1px, transparent 1px), linear-gradient(to bottom, #0f1c3f 1px, transparent 1px)' 
                   : 'none',
@@ -9026,7 +10454,7 @@ export default function DrawingReview({ lang, onApplyExtractedFacts }) {
             <div style={{ marginTop: '8px', background: '#020617', border: '1px solid #1e293b', borderRadius: '4px', padding: '6px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.74rem', color: '#94a3b8', fontFamily: 'monospace' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ color: '#38bdf8', fontWeight: 700 }}>COMMAND:</span>
-                <span>_EFC_AUDIT_2026 [Loaded: {activeFile.name} | Entities: 4,820 | Status: Geometry Verified]</span>
+                <span>_EFC_SIMULATION_2026 [Loaded: {activeFile.name} | Mode: Educational CAD Simulation & Verification Overlay]</span>
               </div>
               <div style={{ display: 'flex', gap: '10px', color: '#64748b' }}>
                 <span style={{ color: '#10b981' }}>SNAP: ON</span>
@@ -9115,12 +10543,12 @@ export default function DrawingReview({ lang, onApplyExtractedFacts }) {
   );
 }
 
-```
+`
 
 ================================================================================
 📁 ملف: src/components/IssueWorkspace.jsx
 ================================================================================
-```javascript
+`jsx
 import React, { useState } from 'react';
 import { 
   ShieldAlert, 
@@ -9161,45 +10589,108 @@ export default function IssueWorkspace({ lang, selectedProject, onGenerateReport
   const [selectedIssueCategory, setSelectedIssueCategory] = useState('egress');
   const [analyzed, setAnalyzed] = useState(true);
 
-  // Pre-configured realistic corrective options for discussion
-  const correctiveOptions = [
-    {
-      id: 'opt-a',
-      titleAr: 'البديل الأول: إنشاء ممر هروب أفقي محمي (Horizontal Exit) مع زيادة معدل الرشاشات',
-      titleEn: 'Option A: Pressurized Horizontal Exit Corridor with Enhanced Fast-Response Sprinklers',
-      advantagesAr: 'لا يتطلب نزع ملكية أو تعدي على خط التنظيم الخارجي، ويوفر منطقة لجوء آمنة بنفس الطابق.',
-      advantagesEn: 'No external boundary encroachment, creates a safe refuge area on the same level.',
-      constraintsAr: 'يتطلب التضحية بجزء من المساحة الإيجارية وتأكيد مقاومة الفاصل الحريقي ساعتين مع أبواب ذاتية الغلق.',
-      constraintsEn: 'Requires partial retail area reduction and certified 2-hr fire-rated wall with magnetic hold-open doors.',
-      assumptionsAr: 'افتراض قدرة البلاطة الخرسانية القائمة على تحمل عزل الحريق ساعتين.',
-      codeCitation: 'كود ٣٠٥/١ - الباب الرابع - البند ٤-٣-٢ (المخارج الأفقية)',
-      authorityApprovalLikelihood: 'خيار معتمد كودياً كبديل هندسي معادل بموافقة اللجنة الفنية الاستشارية للحماية المدنية'
-    },
-    {
-      id: 'opt-b',
-      titleAr: 'البديل الثاني: عزل الدرج الداخلي القائم بحوائط ساعتين وتوفير نظام ضغط هواء موجب مع رشاشات ESFR',
-      titleEn: 'Option B: Enclose Existing Staircase with 2-Hr Shaft & Positive Pressure Fans + ESFR Sprinklers',
-      advantagesAr: 'أقل تكلفة إنشائية، ويحمي مسار الهروب القائم بالكامل من تسرب الدخان والحرارة.',
-      advantagesEn: 'Lower structural disruption, protects existing staircase from smoke penetration.',
-      constraintsAr: 'يتطلب مساراً كهربائياً آمناً ومولد طوارئ لتشغيل مراوح الضغط الموجب دون انقطاع.',
-      constraintsEn: 'Requires dedicated fire-rated wiring and standby generator for uninterrupted pressurization fan operation.',
-      assumptionsAr: 'افتراض توفر مخرج مباشر في أسفل الدرج يؤدي للشارع الخارجي.',
-      codeCitation: 'كود ٣٠٥/١ - الباب الخامس - البند ٥-١-٤ (السلالم المضغوطة)',
-      authorityApprovalLikelihood: 'مقبول بنسبة عالية مع تقديم دراسة سريان الهواء معتمدة من استشاري ميكانيكا'
-    },
-    {
-      id: 'opt-c',
-      titleAr: 'البديل الثالث: إعادة تقسيم الإشغال وتخفيض الحمولة الاستيعابية (Occupant Load Capping)',
-      titleEn: 'Option C: Occupancy Compartmentalization & Occupant Load Reduction',
-      advantagesAr: 'تخفيض متطلبات تدفق الأشخاص دون أعمال هدم وتعديل إنشائي واسع.',
-      advantagesEn: 'Reduces required egress width without major civil demolition.',
-      constraintsAr: 'يفرض قيوداً تشغيلية وتجارية على عدد الزوار والمحلات المسموح بتشغيلها.',
-      constraintsEn: 'Imposes operational capacity limits on the commercial facility.',
-      assumptionsAr: 'افتراض إمكانية التحكم الإداري والأمني في عدد الداخلين للمبنى.',
-      codeCitation: 'كود ٣٠٥/١ - الباب الثاني - البند ٢-١ (كثافة الإشغال)',
-      authorityApprovalLikelihood: 'يتطلب تعهداً موثقاً من مالك المشروع وموافقة مديرية أمن الحماية المدنية المختصة'
-    }
-  ];
+  // Categorized realistic corrective options with full Arabic & English data
+  const OPTIONS_BY_CATEGORY = {
+    egress: [
+      {
+        id: 'opt-a',
+        titleAr: 'البديل الأول: إنشاء ممر هروب أفقي محمي (Horizontal Exit) مع زيادة معدل الرشاشات',
+        titleEn: 'Option A: Pressurized Horizontal Exit Corridor with Enhanced Fast-Response Sprinklers',
+        advantagesAr: 'لا يتطلب نزع ملكية أو تعدي على خط التنظيم الخارجي، ويوفر منطقة لجوء آمنة بنفس الطابق.',
+        advantagesEn: 'No external boundary encroachment, creates a safe refuge area on the same level.',
+        constraintsAr: 'يتطلب التضحية بجزء من المساحة الإيجارية وتأكيد مقاومة الفاصل الحريقي ساعتين مع أبواب ذاتية الغلق.',
+        constraintsEn: 'Requires partial retail area reduction and certified 2-hr fire-rated wall with magnetic hold-open doors.',
+        assumptionsAr: 'افتراض قدرة البلاطة الخرسانية القائمة على تحمل عزل الحريق ساعتين.',
+        assumptionsEn: 'Assumption of existing reinforced concrete slab achieving 2-hr fire resistance rating.',
+        codeCitation: 'كود ٣٠٥/١ - الباب الرابع - البند ٤-٣-٢ (المخارج الأفقية)',
+        authorityApprovalLikelihood: 'خيار معتمد كودياً كبديل هندسي معادل بموافقة اللجنة الفنية الاستشارية للحماية المدنية'
+      },
+      {
+        id: 'opt-b',
+        titleAr: 'البديل الثاني: عزل الدرج الداخلي القائم بحوائط ساعتين وتوفير نظام ضغط هواء موجب مع رشاشات ESFR',
+        titleEn: 'Option B: Enclose Existing Staircase with 2-Hr Shaft & Positive Pressure Fans + ESFR Sprinklers',
+        advantagesAr: 'أقل تكلفة إنشائية، ويحمي مسار الهروب القائم بالكامل من تسرب الدخان والحرارة.',
+        advantagesEn: 'Lower structural disruption, protects existing staircase from smoke penetration.',
+        constraintsAr: 'يتطلب مساراً كهربائياً آمناً ومولد طوارئ لتشغيل مراوح الضغط الموجب دون انقطاع.',
+        constraintsEn: 'Requires dedicated fire-rated wiring and standby generator for uninterrupted pressurization fan operation.',
+        assumptionsAr: 'افتراض توفر مخرج مباشر في أسفل الدرج يؤدي للشارع الخارجي.',
+        assumptionsEn: 'Assumption of direct ground floor discharge leading safely to public way.',
+        codeCitation: 'كود ٣٠٥/١ - الباب الخامس - البند ٥-١-٤ (السلالم المضغوطة)',
+        authorityApprovalLikelihood: 'مقبول بنسبة عالية مع تقديم دراسة سريان الهواء معتمدة من استشاري ميكانيكا'
+      },
+      {
+        id: 'opt-c',
+        titleAr: 'البديل الثالث: إعادة تقسيم الإشغال وتخفيض الحمولة الاستيعابية (Occupant Load Capping)',
+        titleEn: 'Option C: Occupancy Compartmentalization & Occupant Load Reduction',
+        advantagesAr: 'تخفيض متطلبات تدفق الأشخاص دون أعمال هدم وتعديل إنشائي واسع.',
+        advantagesEn: 'Reduces required egress width without major civil demolition.',
+        constraintsAr: 'يفرض قيوداً تشغيلية وتجارية على عدد الزوار والمحلات المسموح بتشغيلها.',
+        constraintsEn: 'Imposes operational capacity limits on the commercial facility.',
+        assumptionsAr: 'افتراض إمكانية التحكم الإداري والأمني في عدد الداخلين للمبنى.',
+        assumptionsEn: 'Assumption of strict administrative access control on maximum occupant density.',
+        codeCitation: 'كود ٣٠٥/١ - الباب الثاني - البند ٢-١ (كثافة الإشغال)',
+        authorityApprovalLikelihood: 'يتطلب تعهداً موثقاً من مالك المشروع وموافقة مديرية أمن الحماية المدنية المختصة'
+      }
+    ],
+    transformers: [
+      {
+        id: 'opt-t1',
+        titleAr: 'البديل الأول: حماية الغرفة بنظام إطفاء غازي تلقائي (Clean Agent) مع عزل إنشائي ٣ ساعات',
+        titleEn: 'Option A: Clean Agent Total Flooding System with 3-Hr Fire Rated Enclosure',
+        advantagesAr: 'إخماد سريع فوري دون إتلاف المعدات الكهربائية الحية ودون الحاجة لتصريف مياه.',
+        advantagesEn: 'Instant non-conductive suppression without water damage to live electrical equipment.',
+        constraintsAr: 'يتطلب إحكام الغرفة (Room Integrity Test) وخوانق حريق آلية تغلق قبل التفريغ.',
+        constraintsEn: 'Requires certified room envelope integrity and automatic motorized fire dampers.',
+        assumptionsAr: 'افتراض إمكانية فصل التغذية الكهربائية آلياً (Trip Coil) عند إشارة الإنذار.',
+        assumptionsEn: 'Assumption of automatic trip-coil interlock disconnecting power prior to discharge.',
+        codeCitation: 'كود ٣٠٥/٢ - الباب الرابع ص ٤-١٢ وكود ٣٠٥/٣ ص ١-١٨',
+        authorityApprovalLikelihood: 'مطابق تماماً لاشتراطات كود الحماية المدنية لغرف المحولات'
+      },
+      {
+        id: 'opt-t2',
+        titleAr: 'البديل الثاني: استبدال المحول الزيتي بمحول جاف (Dry-Type Transformer)',
+        titleEn: 'Option B: Replace Oil-Filled with Cast-Resin Dry-Type Transformer',
+        advantagesAr: 'إلغاء خطر انتشار الزيت المشتعل وتخفيض متطلب العزل الحريقي إلى ساعتين فقط.',
+        advantagesEn: 'Eliminates pool fire risk and reduces required wall fire separation to 2 hours.',
+        constraintsAr: 'تكلفة استبدال المعدات مرتفعة نسبياً.',
+        constraintsEn: 'Higher initial capital expenditure for transformer equipment replacement.',
+        assumptionsAr: 'افتراض قدرة الشبكة وأبعاد الغرفة على استيعاب المحول الجاف.',
+        assumptionsEn: 'Assumption of adequate ventilation and physical dimensions for dry-type cooling.',
+        codeCitation: 'كود ٣٠٥/١ - الباب الثالث ص ٣-١٥',
+        authorityApprovalLikelihood: 'مقبول ومعتمد ويوصى به للمباني الإدارية والتجارية المغلقة'
+      }
+    ],
+    smoke: [
+      {
+        id: 'opt-s1',
+        titleAr: 'البديل الأول: نظام سحب دخان ميكانيكي بمعدل ١٠ مرات/ساعة ومجاري هواء مقاومة ساعتين',
+        titleEn: 'Option A: Mechanical Smoke Exhaust System @ 10 ACH with 2-Hr Fire Rated Ductwork',
+        advantagesAr: 'سحب فعال للدخان والحرارة يضمن مسارات هروب مرئية لفرق الإنقاذ.',
+        advantagesEn: 'Effective smoke evacuation maintaining tenable egress conditions.',
+        constraintsAr: 'يتطلب فتحات تعويض هواء طبيعي أو ميكانيكي بنسبة ٧٥-٨٠٪ من معدل السحب.',
+        constraintsEn: 'Requires dedicated makeup air system delivering 75-80% of exhaust rate.',
+        assumptionsAr: 'افتراض توفر تغذية طوارئ كهربائية مستقلة للمراوح من المولد.',
+        assumptionsEn: 'Assumption of dual power supply from life-safety standby generator.',
+        codeCitation: 'كود ٣٠٥/٢ - الباب الخامس (التهوية وسحب الدخان) ص ٥-١١',
+        authorityApprovalLikelihood: 'الحل الكودي الإلزامي المعتمد من الحماية المدنية للبدرومات'
+      },
+      {
+        id: 'opt-s2',
+        titleAr: 'البديل الثاني: نظام مراوح الدفع النفاثة (Jet Fans) الموجهة مع نمذجة CFD',
+        titleEn: 'Option B: Impulse Jet Fan Ventilation System with Validated CFD Simulation',
+        advantagesAr: 'يلغي مجاري الهواء الضخمة ويوفر مساحات رأسية للسيارات والخدمات.',
+        advantagesEn: 'Eliminates extensive duct runs, saving critical ceiling clearance.',
+        constraintsAr: 'يتطلب تقديم دراسة محاكاة ديناميكا موائع حسابية (CFD) معتمدة من استشاري.',
+        constraintsEn: 'Requires certified CFD modeling showing velocity distribution and smoke clearance.',
+        assumptionsAr: 'افتراض تقسيم الجراج إلى مناطق دخان لا تتجاوز ٢٥٠٠ م² لكل منطقة.',
+        assumptionsEn: 'Assumption of smoke zoning not exceeding 2,500 m² per exhaust section.',
+        codeCitation: 'كود ٣٠٥/٢ - ملحق أنظمة التهوية النفاثة والقرار ٢٥٥/٢٠٢٦',
+        authorityApprovalLikelihood: 'مقبول لدى لجان الحماية المدنية بموجب دراسة CFD معتمدة'
+      }
+    ]
+  };
+
+  const correctiveOptions = OPTIONS_BY_CATEGORY[selectedIssueCategory] || OPTIONS_BY_CATEGORY.egress;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -9239,6 +10730,35 @@ export default function IssueWorkspace({ lang, selectedProject, onGenerateReport
         </h2>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div>
+            <label style={{ fontSize: '0.84rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
+              {isAr ? 'تصنيف الملاحظة الفنية / نوع المنظومة:' : 'Issue Category / System Type:'}
+            </label>
+            <select
+              value={selectedIssueCategory}
+              onChange={(e) => {
+                const cat = e.target.value;
+                setSelectedIssueCategory(cat);
+                if (cat === 'egress') {
+                  setIssueTitle(isAr ? 'تجاوز مسافة الارتحال بأحد أدوار المبنى وعدم وجود درج هروب ثانٍ مباشر' : 'Excess travel distance and single fire exit staircase');
+                  setIssueDescription(isAr ? 'مبنى قائم تم رصد مسار هروب بطول ٥٨ متراً ينتهي بدرج واحد غير معزول مع تعذر إنشاء درج خارجي بسبب ارتداد الجار.' : '58m travel distance leading to a single unrated staircase with boundary constraints.');
+                } else if (cat === 'transformers') {
+                  setIssueTitle(isAr ? 'وجود غرفة محول كهربائي ملاصقة لممر هروب رئيسي بدون عزل ٣ ساعات' : 'Transformer room adjacent to main egress path without 3-hr fire rating');
+                  setIssueDescription(isAr ? 'غرفة محول مغمور بالزيت تفتح أبوابها على ممر داخلي ولا تحتوي على وسيط إطفاء غازي تلقائي أو حوض احتواء زيت.' : 'Oil transformer room discharging onto internal corridor without clean agent suppression or bund wall.');
+                } else if (cat === 'smoke') {
+                  setIssueTitle(isAr ? 'قصور تهوية وسحب دخان بدروم جراج سيارات متعدد الطوابق' : 'Inadequate mechanical smoke exhaust in multi-level parking basement');
+                  setIssueDescription(isAr ? 'بدروم سيارات بمساحة ١٢٠٠ م² لا يحتوي على مجاري سحب دخان كودية (١٠ مرات/ساعة) أو فتحات تعويض هواء.' : '1200 m² parking basement lacking 10 ACH mechanical smoke extraction and makeup air dampers.');
+                }
+                setAnalyzed(true);
+              }}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #cbd5e1', fontFamily: 'inherit', fontSize: '0.92rem', color: '#0f172a', background: '#ffffff' }}
+            >
+              <option value="egress">{isAr ? 'مسارات الهروب والسلالم وعروض الأبواب (كود ٣٠٥/١)' : 'Egress Paths, Staircases & Door Widths (Code 305/1)'}</option>
+              <option value="transformers">{isAr ? 'غرف المحولات واللوحات الكهربائية والعزل الحريقي (كود ٣٠٥/١ و ٣٠٥/٢ و ٣٠٥/٣)' : 'Transformer & Electrical Rooms (Code 305/1, 305/2, 305/3)'}</option>
+              <option value="smoke">{isAr ? 'سحب دخان البدروم والجراجات ومراوح الضغط (كود ٣٠٥/٢ و ٣٠٥/٣)' : 'Basement Smoke Exhaust & Pressurization (Code 305/2, 305/3)'}</option>
+            </select>
+          </div>
+
           <div>
             <label style={{ fontSize: '0.84rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
               {isAr ? 'عنوان الملاحظة الفنية:' : 'Issue Title:'}
@@ -9380,12 +10900,12 @@ export default function IssueWorkspace({ lang, selectedProject, onGenerateReport
   );
 }
 
-```
+`
 
 ================================================================================
 📁 ملف: src/components/ReportsView.jsx
 ================================================================================
-```javascript
+`jsx
 import React from 'react';
 import { 
   Printer, 
@@ -9399,6 +10919,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { OFFICIAL_METADATA } from '../data/codeKnowledgeBase';
+import FireBrandLogo from './FireBrandLogo';
 
 export default function ReportsView({ lang, selectedProject }) {
   const isAr = lang === 'ar';
@@ -9512,7 +11033,7 @@ export default function ReportsView({ lang, selectedProject }) {
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <button 
             className="btn-secondary" 
             onClick={() => window.print()}
@@ -9533,39 +11054,28 @@ export default function ReportsView({ lang, selectedProject }) {
       </div>
 
       {/* Printable Technical Memorandum Document Sheet */}
-      <div style={{
-        background: '#ffffff',
-        border: '1px solid #cbd5e1',
-        borderRadius: 'var(--radius-lg)',
-        padding: '48px',
-        maxWidth: '960px',
-        margin: '0 auto',
-        width: '100%',
-        boxShadow: 'var(--shadow-lg)',
-        lineHeight: 1.7,
-        color: '#0f172a'
-      }}>
+      <div className="report-sheet">
         
         {/* Official Letterhead */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #0f172a', paddingBottom: '20px', marginBottom: '24px' }}>
           <div style={{ textAlign: isAr ? 'right' : 'left' }}>
             <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#0f172a' }}>
-              {isAr ? 'جمهورية مصر العربية' : 'Arab Republic of Egypt'}
+              {isAr ? 'مذكرة فنية استرشادية لمطابقة كود الحريق' : 'Technical Fire Code Verification Memorandum'}
             </div>
             <div style={{ fontSize: '0.86rem', color: '#334155' }}>
-              {isAr ? 'وزارة الإسكان والمرافق والمجتمعات العمرانية' : 'Ministry of Housing, Utilities & Urban Communities'}
+              {isAr ? 'وفق الكود المصري لحماية المنشآت من أخطار الحريق (قرار وزاري رقم ٢٥٥ لسنة ٢٠٢٦)' : 'Compliant with Egyptian Fire Code (Decree No. 255/2026)'}
             </div>
             <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
-              {isAr ? 'المركز القومي لبحوث الإسكان والبناء' : 'Housing & Building National Research Center (HBRC)'}
+              {isAr ? 'إعداد: المهندس / أحمد فوزي — مهندس أنظمة مكافحة وإنذار الحريق ومصمم البرنامج' : 'Prepared by: Eng. Ahmed Fawzy — Fire Protection & Alarm Systems Engineer'}
             </div>
           </div>
 
           <div style={{ textAlign: 'center' }}>
-            <div style={{ width: '48px', height: '48px', margin: '0 auto 4px auto', background: '#dc2626', color: 'white', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Flame size={28} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '4px' }}>
+              <FireBrandLogo size={46} />
             </div>
             <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#dc2626' }}>
-              كود الحريق ٢٠٢٦
+              كود الحريق ٣٠٥
             </span>
           </div>
 
@@ -9602,36 +11112,38 @@ export default function ReportsView({ lang, selectedProject }) {
           <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#1e293b', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px', marginBottom: '12px' }}>
             {isAr ? 'أولاً: بيانات المنشأة والمعطيات الهندسية المعتمدة' : '1. Project Identification & Technical Data'}
           </h2>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
-            <tbody>
-              <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <td style={{ padding: '8px', fontWeight: 700, color: '#475569', width: '30%' }}>{isAr ? 'اسم المشروع:' : 'Project Name:'}</td>
-                <td style={{ padding: '8px', color: '#0f172a' }}>{isAr ? project.titleAr : project.titleEn}</td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <td style={{ padding: '8px', fontWeight: 700, color: '#475569' }}>{isAr ? 'الموقع العام:' : 'Location:'}</td>
-                <td style={{ padding: '8px', color: '#0f172a' }}>{project.facts.location}</td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <td style={{ padding: '8px', fontWeight: 700, color: '#475569' }}>{isAr ? 'التصنيف الكودي للإشغال:' : 'Occupancy Group:'}</td>
-                <td style={{ padding: '8px', color: '#0f172a' }}>
-                  <strong>{project.facts.subgroupNameAr}</strong> ({isAr ? 'جدول ٢-١ الباب الثاني' : 'Table 2-1'})
-                </td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <td style={{ padding: '8px', fontWeight: 700, color: '#475569' }}>{isAr ? 'عدد الطوابق والارتفاع:' : 'Floors & Height:'}</td>
-                <td style={{ padding: '8px', color: '#0f172a' }}>
-                  {project.facts.totalFloors} {isAr ? 'طوابق' : 'floors'} ({project.facts.basementFloors} {isAr ? 'بدروم' : 'basement'} + {project.facts.aboveGroundFloors} {isAr ? 'أرضي ومتكرر' : 'above'}) • {isAr ? `ارتفاع المبنى: ${project.facts.buildingHeight} متراً` : `Height: ${project.facts.buildingHeight}m`}
-                </td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <td style={{ padding: '8px', fontWeight: 700, color: '#475569' }}>{isAr ? 'مساحة الدور والإجمالي:' : 'Floor & Total Area:'}</td>
-                <td style={{ padding: '8px', color: '#0f172a' }}>
-                  {project.facts.floorArea} م² {isAr ? 'للدور' : '/ floor'} • {project.facts.totalArea} م² {isAr ? 'إجمالي المساحة' : 'total'}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div className="table-responsive">
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
+              <tbody>
+                <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td style={{ padding: '8px', fontWeight: 700, color: '#475569', width: '30%' }}>{isAr ? 'اسم المشروع:' : 'Project Name:'}</td>
+                  <td style={{ padding: '8px', color: '#0f172a' }}>{isAr ? project.titleAr : project.titleEn}</td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td style={{ padding: '8px', fontWeight: 700, color: '#475569' }}>{isAr ? 'الموقع العام:' : 'Location:'}</td>
+                  <td style={{ padding: '8px', color: '#0f172a' }}>{project.facts.location}</td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td style={{ padding: '8px', fontWeight: 700, color: '#475569' }}>{isAr ? 'التصنيف الكودي للإشغال:' : 'Occupancy Group:'}</td>
+                  <td style={{ padding: '8px', color: '#0f172a' }}>
+                    <strong>{project.facts.subgroupNameAr}</strong> ({isAr ? 'جدول ٢-١ الباب الثاني' : 'Table 2-1'})
+                  </td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td style={{ padding: '8px', fontWeight: 700, color: '#475569' }}>{isAr ? 'عدد الطوابق والارتفاع:' : 'Floors & Height:'}</td>
+                  <td style={{ padding: '8px', color: '#0f172a' }}>
+                    {project.facts.totalFloors} {isAr ? 'طوابق' : 'floors'} ({project.facts.basementFloors} {isAr ? 'بدروم' : 'basement'} + {project.facts.aboveGroundFloors} {isAr ? 'أرضي ومتكرر' : 'above'}) • {isAr ? `ارتفاع المبنى: ${project.facts.buildingHeight} متراً` : `Height: ${project.facts.buildingHeight}m`}
+                  </td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td style={{ padding: '8px', fontWeight: 700, color: '#475569' }}>{isAr ? 'مساحة الدور والإجمالي:' : 'Floor & Total Area:'}</td>
+                  <td style={{ padding: '8px', color: '#0f172a' }}>
+                    {project.facts.floorArea} م² {isAr ? 'للدور' : '/ floor'} • {project.facts.totalArea} م² {isAr ? 'إجمالي المساحة' : 'total'}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Section 2: Core Code Provisions Applied */}
@@ -9641,31 +11153,51 @@ export default function ReportsView({ lang, selectedProject }) {
           </h2>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {/* Dynamic Height Classification */}
             <div style={{ padding: '12px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                 <strong style={{ color: '#0f172a', fontSize: '0.9rem' }}>
-                  ١. اشتراطات المباني المرتفعة (High-Rise Requirements)
+                  {Number(project.facts.buildingHeight) > 22 
+                    ? (isAr ? '١. اشتراطات المباني المرتفعة (High-Rise Provisions)' : '1. High-Rise Building Provisions')
+                    : (isAr ? '١. اشتراطات المباني منخفضة ومتوسطة الارتفاع' : '1. Low / Mid-Rise Building Provisions')}
                 </strong>
                 <span style={{ fontSize: '0.78rem', color: '#dc2626', fontWeight: 700 }}>
-                  كود ٣٠٥/١ - الباب الخامس - ص ٥-٢
+                  {Number(project.facts.buildingHeight) > 22 
+                    ? (isAr ? 'كود ٣٠٥/١ - الباب الخامس - ص ٥-٢' : 'Code 305/1 - Ch. 5 - p. 5-2')
+                    : (isAr ? 'كود ٣٠٥/١ - الباب الرابع - ص ٤-٨' : 'Code 305/1 - Ch. 4 - p. 4-8')}
                 </span>
               </div>
               <p style={{ fontSize: '0.84rem', color: '#475569', lineHeight: 1.5 }}>
-                تجاوز ارتفاع المبنى (٢٢ متراً) يلزمه توفير شبكة رشاشات تلقائية شاملة لكافة الأدوار، ومصعد مخصص لرجال الإطفاء، وسلالم هروب مغلقة ومحمية بضغط هواء موجب.
+                {Number(project.facts.buildingHeight) > 22
+                  ? (isAr 
+                      ? `تجاوز ارتفاع المبنى (${project.facts.buildingHeight} متراً) لحد الارتفاع الكودي (٢٢م للإشغالات التجارية والإدارية / ٢٨م للسكني) يلزمه توفير شبكة رشاشات تلقائية شاملة لكافة الأدوار، ومصعد مخصص لرجال الإطفاء، وسلالم هروب مغلقة ومحمية بضغط هواء موجب (٢٥-٥٠ باسكال).`
+                      : `Building height (${project.facts.buildingHeight}m) exceeds the high-rise threshold (22m mercantile/business / 28m residential), mandating automatic sprinklers throughout, designated firefighter lift, and pressurized staircases.`)
+                  : (isAr
+                      ? `ارتفاع المبنى الحالي (${project.facts.buildingHeight} متراً) يقع دون حد المباني المرتفعة، مما يعفي المشروع من متطلبات مصاعد الحريق المخصصة وشبكات ضغط السلالم المعقدة، مع الاكتفاء بالتهوية الطبيعية للسلالم الخارجية أو صواعد الهروب المحمية ساعتين.`
+                      : `Building height (${project.facts.buildingHeight}m) is below the high-rise limit, exempting it from specialized firefighter lifts and complex stair pressurization, provided natural ventilation or protected enclosures are maintained.`)}
               </p>
             </div>
 
+            {/* Dynamic Basement Assessment */}
             <div style={{ padding: '12px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                 <strong style={{ color: '#0f172a', fontSize: '0.9rem' }}>
-                  ٢. عزل جراج البدروم وسحب الدخان الميكانيكي
+                  {Number(project.facts.basementFloors) > 0
+                    ? (isAr ? '٢. عزل جراج البدروم وسحب الدخان الميكانيكي' : '2. Basement Compartmentation & Smoke Exhaust')
+                    : (isAr ? '٢. وضعية أدوار البدروم (Basement Floors)' : '2. Basement Assessment')}
                 </strong>
                 <span style={{ fontSize: '0.78rem', color: '#dc2626', fontWeight: 700 }}>
-                  كود ٣٠٥/١ - الباب الخامس - ص ٥-١٠
+                  {isAr ? 'كود ٣٠٥/١ - الباب الخامس - ص ٥-١٠' : 'Code 305/1 - Ch. 5 - p. 5-10'}
                 </span>
               </div>
               <p style={{ fontSize: '0.84rem', color: '#475569', lineHeight: 1.5 }}>
-                عزل أرضيات وحوائط البدروم بفواصل حريق لا تقل عن ساعتين، وتركيب نظام ميكانيكي مستقل لسحب الدخان بمعدل ١٠ مرات تغيير هواء/ساعة مع فصل سلالم هروب البدروم بمخرج مباشر للخارج.
+                {Number(project.facts.basementFloors) > 0
+                  ? (isAr
+                      ? `عزل أرضيات وحوائط البدروم بفواصل حريق لا تقل عن ساعتين، وتركيب نظام ميكانيكي مستقل لسحب الدخان بمعدل ${project.facts.basementUse === 'parking' ? '١٠' : '٦'} مرات تغيير هواء/ساعة مع فصل سلالم هروب البدروم بمخرج مباشر للخارج.`
+                      : `Basement requires 2-hour fire-rated separation, independent mechanical smoke exhaust at ${project.facts.basementUse === 'parking' ? '10' : '6'} ACH, and direct-to-exterior isolated stairs.`)
+                  : (isAr
+                      ? `المبنى مصمم بدون أدوار تحت الأرض (صفر بدروم)، مما يمنحه إعفاءً كودياً كاملاً من اشتراطات سحب دخان البدرومات الميكانيكية المعقدة وفواصل العزل تحت السطحية.`
+                      : `Building contains no underground levels (zero basements), granting full exemption from complex basement mechanical smoke exhaust systems.`)}
               </p>
             </div>
 
@@ -9743,12 +11275,12 @@ export default function ReportsView({ lang, selectedProject }) {
   );
 }
 
-```
+`
 
 ================================================================================
 📁 ملف: src/components/AdminView.jsx
 ================================================================================
-```javascript
+`jsx
 import React, { useState } from 'react';
 import { 
   Settings, 
@@ -9831,39 +11363,39 @@ export default function AdminView({ lang }) {
       if (providerId === 'local-rag') {
         setTestResult({
           success: true,
-          messageAr: 'الاتصال ناجح: محرك الاسترجاع المعزز المحلي (Grounding) يعمل بكفاءة ومربوط بـ ٨٠٣ صفحات مفهرسة من الكود المصري ٢٠٢٦.',
-          messageEn: 'Connection Successful: Local Grounded RAG is active and grounded in 803 indexed pages of the 2026 Egyptian Fire Code.'
+          messageAr: 'الاتصال المحلي نشط: قاعدة المعرفة المحلية المعتمدة الصادرة بقرار ٢٥٥ لسنة ٢٠٢٦ جاهزة وتعمل بدون إنترنت (Offline RAG).',
+          messageEn: 'Local Grounded RAG is active and operational offline with official 2026 Code provisions.'
         });
       } else if (providerId === 'ms-copilot') {
         if (!copilotApiKey || !copilotEndpoint) {
           setTestResult({
             success: false,
-            messageAr: 'فشل الاختبار: لم يتم إدخال مفتاح الـ API أو نقطة نهاية Microsoft Copilot / Azure Endpoint. لا يمكن تفعيل هذا المزود دون إعداد صالح.',
-            messageEn: 'Test Failed: API Key or Endpoint missing. Copilot integration cannot be marked active without verified credentials.'
+            messageAr: 'فحص الإعدادات: لم يتم إدخال مفتاح الـ API أو رابط الـ Endpoint. لا يمكن حفظ أو تفعيل المزود دون بيانات صالحة.',
+            messageEn: 'Validation Notice: API Key or Endpoint missing.'
           });
         } else {
           setTestResult({
             success: true,
-            messageAr: 'تم التحقق من نقطة نهاية Microsoft Copilot بنجاح.',
-            messageEn: 'Microsoft Copilot endpoint verified successfully.'
+            messageAr: 'تم التحقق من صحة تنسيق الرابط والمفتاح محلياً. ملاحظة أمنية: في بيئة الإنتاج المؤسسية، يُوصى بربط المفاتيح عبر خادم وسيط (Backend Proxy) لمنع كشفها في المتصفح.',
+            messageEn: 'Format verified locally. Note: In enterprise production, API keys should be handled via a secure backend proxy to prevent client-side exposure.'
           });
         }
       } else if (providerId === 'gemini-custom') {
         if (!geminiApiKey) {
           setTestResult({
             success: false,
-            messageAr: 'فشل الاختبار: يرجى إدخال مفتاح ترخيص Gemini API.',
-            messageEn: 'Test Failed: Please provide a valid Gemini API key.'
+            messageAr: 'فحص الإعدادات: يرجى إدخال مفتاح Google Gemini API أولاً.',
+            messageEn: 'Validation Notice: Please provide a Gemini API key first.'
           });
         } else {
           setTestResult({
             success: true,
-            messageAr: 'تم الاتصال بواجهة Gemini بنجاح.',
-            messageEn: 'Gemini endpoint connected successfully.'
+            messageAr: 'تم التحقق من صحة تنسيق مفتاح Gemini محلياً. تنبيه أمني: استخدام المفتاح في المتصفح مخصص للاختبار الفردي؛ يُوصى باستخدام Backend Proxy في النشر المؤسسي.',
+            messageEn: 'Gemini Key format verified locally. For production deployments, route requests through a secure backend proxy.'
           });
         }
       }
-    }, 1200);
+    }, 800);
   };
 
   return (
@@ -9955,6 +11487,17 @@ export default function AdminView({ lang }) {
       {activeSubTab === 'providers' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
+          {/* Security and Architecture Notice */}
+          <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 'var(--radius-lg)', padding: '16px 20px', fontSize: '0.86rem', color: '#92400e', lineHeight: 1.6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+              <Key size={18} color="#d97706" />
+              <strong style={{ color: '#b45309' }}>{isAr ? 'تنبيه أمني ومعماري هام بخصوص مفاتيح الـ API:' : 'Important Architecture & Security Warning:'}</strong>
+            </div>
+            {isAr 
+              ? 'تطبيق الويب يعمل بصورة كاملة من جهة العميل (Client-Side Single Page Application). أي مفاتيح API تُدخل هنا تُحفظ في ذاكرة المتصفح المحلية (localStorage) وتُرسل مباشرة من جهازك. للاستخدام في المشروعات الحساسة أو النشر المؤسسي، يجب دائماً تفويض خادم وسيط (Backend Proxy / Cloud Function) لإخفاء المفاتيح وتأمين الاستدعاءات.'
+              : 'This application runs entirely client-side. Keys entered here are stored in localStorage and called directly from your browser. In commercial or sensitive deployments, always route AI requests through a secure backend proxy.'}
+          </div>
+
           <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 'var(--radius-lg)', padding: '16px 20px', fontSize: '0.86rem', color: '#1e40af' }}>
             <strong>{isAr ? 'مبدأ الشفافية في الذكاء الاصطناعي: ' : 'AI Transparency Principle: '}</strong>
             {isAr 
@@ -10180,15 +11723,20 @@ export default function AdminView({ lang }) {
           <div className="card">
             <h3 className="card-title">
               <UserCheck size={20} color="#059669" />
-              {isAr ? 'أدوار وصلاحيات الوصول (RBAC)' : 'Role-Based Access Control'}
+              {isAr ? 'هيكل الصلاحيات المقترح للمؤسسات (Enterprise RBAC Schema)' : 'Proposed Enterprise RBAC Schema'}
             </h3>
+            <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '10px' }}>
+              {isAr 
+                ? 'مخطط هيكلي استرشادي لتوزيع الصلاحيات عند ربط التطبيق مع خادم هوية مؤسسي (SSO / IAM). النسخة الحالية تعمل بجلسة فردية محلية آمنة (Single-User Local Client).'
+                : 'Architectural blueprint for enterprise identity integration (SSO/IAM). Current runtime operates as a secure single-user local client.'}
+            </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.84rem' }}>
               <div style={{ padding: '10px 12px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                 <strong style={{ color: '#0f172a' }}>🛡️ مسؤول النظام (Administrator):</strong>
                 <div style={{ color: '#64748b' }}>إدارة وثائق الكود، تكوين مزودي الذكاء الاصطناعي، ومراقبة سجلات التدقيق.</div>
               </div>
               <div style={{ padding: '10px 12px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                <strong style={{ color: '#0f172a' }}>📐 مهندس استشاري سلامة (Fire Safety Consultant):</strong>
+                <strong style={{ color: '#0f172a' }}>📐 مهندس سلامة ومكافحة حريق (Fire Protection Engineer):</strong>
                 <div style={{ color: '#64748b' }}>إجراء تقييم المشاريع، فحص المخططات، وتوليد مذكرات العرض على الحماية المدنية.</div>
               </div>
               <div style={{ padding: '10px 12px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
@@ -10205,15 +11753,15 @@ export default function AdminView({ lang }) {
           <div className="card">
             <h3 className="card-title">
               <Lock size={20} color="#dc2626" />
-              {isAr ? 'خصوصية وأمان مستندات العميل' : 'Data Privacy & File Security'}
+              {isAr ? 'خصوصية وأمان مستندات المشروعات' : 'Data Privacy & File Security'}
             </h3>
             <p style={{ fontSize: '0.84rem', color: '#475569', lineHeight: 1.6, marginBottom: '12px' }}>
               {isAr 
-                ? 'يتم الاحتفاظ بملفات المخططات والمسودات الفنية المرفوعة في مساحة العمل الخاصة بالمشروع دون أي تدريب لموديلات عامة أو مشاركة خارج المنشأة المصرح لها.'
-                : 'Customer files and drawings remain strictly private within the workspace and are never used for foundation model training.'}
+                ? 'يتم الاحتفاظ بملفات المخططات والمسودات الفنية المرفوعة في مساحة العمل الخاصة بالمشروع محلياً في متصفحك (Client-side Sandbox) دون أي تدريب لموديلات عامة أو مشاركة خارج جهازك.'
+                : 'Customer files and drawings remain strictly local within your browser workspace and are never shared or used for foundation model training.'}
             </p>
             <div style={{ padding: '12px', background: '#ecfdf5', borderRadius: '6px', border: '1px solid #a7f3d0', fontSize: '0.8rem', color: '#065f46' }}>
-              ✓ {isAr ? 'التشفير وحماية البيانات نشطة محلياً وعلى مستوى المشروع' : 'Enterprise data isolation and encryption active'}
+              ✓ {isAr ? 'عزل البيانات نشط محلياً داخل المتصفح (Client LocalStorage Isolation)' : 'Client-side data isolation active — project files stay in your browser'}
             </div>
           </div>
         </div>
@@ -10223,12 +11771,12 @@ export default function AdminView({ lang }) {
   );
 }
 
-```
+`
 
 ================================================================================
 📁 ملف: src/components/FloatingAssistant.jsx
 ================================================================================
-```javascript
+`jsx
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Sparkles, 
@@ -10389,9 +11937,37 @@ export default function FloatingAssistant({ lang, selectedProject, isOpen, setIs
   };
 
   const copyToClipboard = (text, id) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+    const fallbackCopy = () => {
+      try {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        textArea.remove();
+        setCopiedId(id);
+        setTimeout(() => setCopiedId(null), 2000);
+      } catch (err) {
+        console.warn('Fallback copy error:', err);
+      }
+    };
+
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          setCopiedId(id);
+          setTimeout(() => setCopiedId(null), 2000);
+        }).catch(() => fallbackCopy());
+      } else {
+        fallbackCopy();
+      }
+    } catch {
+      fallbackCopy();
+    }
   };
 
   const handleReset = () => {
@@ -11059,11 +12635,12 @@ export default function FloatingAssistant({ lang, selectedProject, isOpen, setIs
           <form 
             onSubmit={(e) => { e.preventDefault(); handleSend(inputVal); }}
             style={{
-              padding: '12px 14px',
+              padding: '12px 14px calc(12px + var(--safe-bottom)) 14px',
               background: '#ffffff',
               borderTop: '1px solid #e2e8f0',
               display: 'flex',
-              gap: '8px'
+              gap: '8px',
+              alignItems: 'center'
             }}
           >
             <input 
@@ -11071,7 +12648,7 @@ export default function FloatingAssistant({ lang, selectedProject, isOpen, setIs
               value={inputVal}
               onChange={(e) => setInputVal(e.target.value)}
               placeholder={searchMode === 'general' 
-                ? (isAr ? "اكتب سؤالك العام عن الكود المصري (مثال: اشتراطات غرف المحول، مسافات الارتحال)..." : "Ask any general Egyptian Fire Code question...") 
+                ? (isAr ? "اكتب سؤالك العام عن الكود المصري..." : "Ask any Egyptian Fire Code question...") 
                 : (isAr ? `اكتب سؤالك بخصوص مشروع (${selectedProject?.titleAr?.slice(0, 18)}...)...` : "Ask about this project...")}
               disabled={loading}
               style={{
@@ -11079,9 +12656,10 @@ export default function FloatingAssistant({ lang, selectedProject, isOpen, setIs
                 padding: '10px 14px',
                 borderRadius: '8px',
                 border: '1px solid #cbd5e1',
-                fontSize: '0.86rem',
+                fontSize: '16px',
                 fontFamily: 'inherit',
-                outline: 'none'
+                outline: 'none',
+                minHeight: '44px'
               }}
             />
             <button
@@ -11093,6 +12671,8 @@ export default function FloatingAssistant({ lang, selectedProject, isOpen, setIs
                 border: 'none',
                 borderRadius: '8px',
                 padding: '0 16px',
+                minHeight: '44px',
+                minWidth: '46px',
                 cursor: inputVal.trim() && !loading ? 'pointer' : 'not-allowed',
                 display: 'flex',
                 alignItems: 'center',
@@ -11100,7 +12680,7 @@ export default function FloatingAssistant({ lang, selectedProject, isOpen, setIs
                 transition: 'background 0.2s'
               }}
             >
-              <Send size={16} />
+              <Send size={18} />
             </button>
           </form>
         </div>
@@ -11109,12 +12689,12 @@ export default function FloatingAssistant({ lang, selectedProject, isOpen, setIs
   );
 }
 
-```
+`
 
 ================================================================================
 📁 ملف: src/components/FirebaseSyncModal.jsx
 ================================================================================
-```javascript
+`jsx
 import React, { useState, useEffect } from 'react';
 import { 
   Cloud, 
@@ -11130,7 +12710,9 @@ import {
   Key, 
   Check, 
   HelpCircle,
-  Copy
+  Copy,
+  ShieldCheck,
+  Lock
 } from 'lucide-react';
 import { 
   getFirebaseConfig, 
@@ -11148,10 +12730,9 @@ export default function FirebaseSyncModal({
   projects = [], 
   onProjectsUpdated 
 }) {
-  if (!isOpen) return null;
-
   const isAr = lang === 'ar';
 
+  // State hooks declared unconditionally at the very top (100% React Hooks rules compliant)
   const [config, setConfig] = useState(getFirebaseConfig());
   const [apiKeyInput, setApiKeyInput] = useState(config.apiKey || '');
   const [appIdInput, setAppIdInput] = useState(config.appId || '');
@@ -11163,18 +12744,22 @@ export default function FirebaseSyncModal({
   const [testResult, setTestResult] = useState(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
+  const [copiedRules, setCopiedRules] = useState(false);
 
   useEffect(() => {
-    const current = getFirebaseConfig();
-    setConfig(current);
-    setApiKeyInput(current.apiKey || '');
-    setAppIdInput(current.appId || '');
-    setSenderIdInput(current.messagingSenderId || '');
+    if (isOpen) {
+      const current = getFirebaseConfig();
+      setConfig(current);
+      setApiKeyInput(current.apiKey || '');
+      setAppIdInput(current.appId || '');
+      setSenderIdInput(current.messagingSenderId || '');
+      setTestResult(null);
+    }
   }, [isOpen]);
 
-  const handleSaveConfig = () => {
+  const handleSaveConfig = async () => {
     try {
-      const updated = saveFirebaseConfig({
+      const updated = await saveFirebaseConfig({
         apiKey: apiKeyInput.trim(),
         appId: appIdInput.trim(),
         messagingSenderId: senderIdInput.trim()
@@ -11188,13 +12773,16 @@ export default function FirebaseSyncModal({
   };
 
   const handleTestConnection = async () => {
-    // Save first
-    handleSaveConfig();
     setTesting(true);
     setTestResult(null);
     try {
-      const res = await testFirebaseConnection();
-      setTestResult(res);
+      await saveFirebaseConfig({
+        apiKey: apiKeyInput.trim(),
+        appId: appIdInput.trim(),
+        messagingSenderId: senderIdInput.trim()
+      });
+      const result = await testFirebaseConnection();
+      setTestResult(result);
     } catch (err) {
       setTestResult({
         success: false,
@@ -11207,13 +12795,19 @@ export default function FirebaseSyncModal({
   };
 
   const handleSyncProjects = async () => {
+    if (!projects || projects.length === 0) {
+      alert(isAr ? 'لا توجد مشاريع محلية لرفعها إلى السحابة.' : 'No local projects to upload.');
+      return;
+    }
     setSyncing(true);
     try {
       const res = await syncProjectsToFirestore(projects);
       if (res.success) {
         alert(isAr 
-          ? `تم بنجاح رفع ومزامنة ${res.syncedCount} مشروع مع قاعدة بيانات Firestore سحابياً!` 
+          ? `تم رفع ومزامنة ${res.syncedCount} مشروع مع قاعدة بيانات Firestore بنجاح!` 
           : `Successfully synced ${res.syncedCount} projects to Firestore!`);
+      } else {
+        alert(isAr ? 'فشلت المزامنة. تأكد من إعداد المفاتيح واختبار الاتصال.' : 'Sync failed. Please check config.');
       }
     } catch (err) {
       alert(isAr ? `فشل المزامنة: ${err.message}` : `Sync failed: ${err.message}`);
@@ -11227,12 +12821,40 @@ export default function FirebaseSyncModal({
     try {
       const cloudProjects = await fetchProjectsFromFirestore();
       if (cloudProjects && cloudProjects.length > 0) {
+        const confirmMerge = window.confirm(isAr
+          ? `تم العثور على (${cloudProjects.length}) مشروع في السحابة.\n\nاضغط [موافق] لدمجها وحفظ مشاريعك الحالية معها بأمان.\nاضغط [إلغاء] للتراجع.`
+          : `Found (${cloudProjects.length}) projects in Firestore.\n\nClick [OK] to safely merge them with your existing local projects.\nClick [Cancel] to abort.`);
+        
+        if (!confirmMerge) return;
+
+        // Safe Merge Strategy: Combine existing projects with cloud projects by ID with strict schema validation
+        const mergedMap = new Map();
+        (projects || []).forEach(p => {
+          if (p && p.id) mergedMap.set(String(p.id), p);
+        });
+        cloudProjects.forEach(cp => {
+          if (!cp || typeof cp !== 'object') return;
+          const key = String(cp.id || `proj-cloud-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`);
+          const existing = mergedMap.get(key) || {};
+          mergedMap.set(key, {
+            ...existing,
+            ...cp,
+            id: key,
+            name: typeof cp.name === 'string' && cp.name.trim() ? cp.name : (existing.name || 'مشروع سحابي بدون عنوان'),
+            occupancyType: cp.occupancyType || existing.occupancyType || 'commercial',
+            status: cp.status || existing.status || 'pending_review',
+            facts: (typeof cp.facts === 'object' && cp.facts !== null) ? { ...(existing.facts || {}), ...cp.facts } : (existing.facts || {})
+          });
+        });
+
+        const mergedList = Array.from(mergedMap.values());
         if (onProjectsUpdated) {
-          onProjectsUpdated(cloudProjects);
+          onProjectsUpdated(mergedList);
         }
+
         alert(isAr 
-          ? `تم استرجاع ${cloudProjects.length} مشروع من قاعدة بيانات Firebase بنجاح!` 
-          : `Successfully fetched ${cloudProjects.length} projects from Firebase!`);
+          ? `تم دمج وتحديث (${mergedList.length}) مشروع بنجاح!` 
+          : `Successfully merged and updated (${mergedList.length}) projects!`);
       } else {
         alert(isAr 
           ? 'قاعدة بيانات Firestore فارغة حالياً. يمكنك استخدام زر "مزامنة ورفع المشاريع" لتصدير مشاريعك الحالية إلى السحابة.' 
@@ -11244,6 +12866,58 @@ export default function FirebaseSyncModal({
       setFetching(false);
     }
   };
+
+  const copySecureRules = () => {
+    const rules = `rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /projects/{projectId} {
+      // Allow read/write only to authenticated users (including anonymous sessions)
+      allow read, write: if request.auth != null;
+    }
+    match /assessments/{assessmentId} {
+      allow read, write: if request.auth != null;
+    }
+    match /_connection_check/{docId} {
+      allow read, write: if true;
+    }
+  }
+}`;
+    const fallbackCopy = () => {
+      try {
+        const textArea = document.createElement("textarea");
+        textArea.value = rules;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        textArea.remove();
+        setCopiedRules(true);
+        setTimeout(() => setCopiedRules(false), 3000);
+      } catch (err) {
+        console.warn('Fallback copy error:', err);
+      }
+    };
+
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(rules).then(() => {
+          setCopiedRules(true);
+          setTimeout(() => setCopiedRules(false), 3000);
+        }).catch(() => fallbackCopy());
+      } else {
+        fallbackCopy();
+      }
+    } catch {
+      fallbackCopy();
+    }
+  };
+
+  // Safe early exit AFTER all React Hooks have been unconditionally executed
+  if (!isOpen) return null;
 
   const isConnected = !!config.apiKey && config.apiKey.trim() !== '';
 
@@ -11261,51 +12935,52 @@ export default function FirebaseSyncModal({
       backgroundColor: 'rgba(5, 11, 24, 0.85)',
       backdropFilter: 'blur(10px)',
       WebkitBackdropFilter: 'blur(10px)',
-      padding: '16px',
+      padding: 'clamp(8px, 2.5vw, 20px)',
       overflowY: 'auto'
     }}>
       <div style={{
         position: 'relative',
         width: '100%',
-        maxWidth: '740px',
-        background: '#0f172a',
-        border: '1.5px solid #d97706',
+        maxWidth: '680px',
+        maxHeight: '94dvh',
+        background: 'linear-gradient(165deg, #0f172a 0%, #090d16 100%)',
+        border: '1px solid rgba(245, 158, 11, 0.3)',
         borderRadius: '20px',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 30px rgba(245, 158, 11, 0.2)',
+        boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 30px rgba(245, 158, 11, 0.15)',
         color: '#f8fafc',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column'
       }}>
-        {/* Header Bar */}
+        {/* Modal Header */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '16px 20px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-          background: 'rgba(255, 255, 255, 0.03)'
+          padding: '18px 24px',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          background: 'rgba(255, 255, 255, 0.02)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{
-              background: 'linear-gradient(135deg, #f59e0b 0%, #b45309 100%)',
               width: '36px',
               height: '36px',
               borderRadius: '10px',
+              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+              color: '#0f172a',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               boxShadow: '0 0 12px rgba(245, 158, 11, 0.4)'
             }}>
-              <Database size={20} color="#ffffff" />
+              <Database size={20} />
             </div>
             <div>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>
-                {isAr ? 'ربط قاعدة بيانات Firebase السحابية' : 'Firebase Cloud Database Hub'}
+              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#fef08a' }}>
+                {isAr ? 'قاعدة بيانات Firebase السحابية (Firestore)' : 'Firebase Cloud Firestore Sync'}
               </h3>
-              <div style={{ fontSize: '0.74rem', color: '#fed7aa', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span>{isAr ? 'المشروع المستهدف:' : 'Target Project:'}</span>
-                <strong style={{ color: '#60a5fa' }}>{DEFAULT_FIREBASE_PROJECT_ID}</strong>
+              <div style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
+                Project ID: <strong style={{ color: '#38bdf8' }}>{DEFAULT_FIREBASE_PROJECT_ID}</strong>
               </div>
             </div>
           </div>
@@ -11407,7 +13082,7 @@ export default function FirebaseSyncModal({
             </div>
           </div>
 
-          {/* Quick Setup Guide Toggle */}
+          {/* Quick Setup Guide Toggle with Secure Firestore Rules */}
           <div style={{
             background: 'rgba(15, 23, 42, 0.8)',
             border: '1px solid rgba(245, 158, 11, 0.25)',
@@ -11420,21 +13095,65 @@ export default function FirebaseSyncModal({
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fde68a', fontWeight: 700, fontSize: '0.84rem' }}>
                 <HelpCircle size={16} color="#f59e0b" />
-                <span>{isAr ? 'خطوات تفعيل قاعدة البيانات في ثوانٍ معدودة:' : 'Quick 3-step setup guide:'}</span>
+                <span>{isAr ? 'خطوات تفعيل قاعدة البيانات وقواعد الأمان المعتمدة:' : 'Setup guide & Secure Firestore Rules:'}</span>
               </div>
               <span style={{ fontSize: '0.74rem', color: '#94a3b8', textDecoration: 'underline' }}>
-                {showGuide ? (isAr ? 'إخفاء' : 'Hide') : (isAr ? 'عرض الخطوات' : 'Show steps')}
+                {showGuide ? (isAr ? 'إخفاء' : 'Hide') : (isAr ? 'عرض الخطوات والقواعد' : 'Show steps & rules')}
               </span>
             </div>
 
             {showGuide && (
-              <ol style={{ margin: '10px 0 0 0', paddingRight: isAr ? '20px' : 0, paddingLeft: !isAr ? '20px' : 0, fontSize: '0.78rem', color: '#cbd5e1', lineHeight: 1.6 }}>
-                <li>ادخل على <a href="https://console.firebase.google.com/project/fire-code-9603d/overview" target="_blank" rel="noreferrer" style={{ color: '#60a5fa' }}>رابط مشروعك (fire-code-9603d)</a> واضغط على أيقونة الترس ⚙️ واختر <strong>Project settings</strong>.</li>
-                <li>في الأسفل تحت قسم <strong>Your apps</strong> اضغط على أيقونة الويب <code>&lt;/&gt;</code> لإنشاء Web App (إن لم يكن منشأً بالفعل).</li>
-                <li>انسخ قيمة <code>apiKey</code> والصقها في الحقل بالأسفل.</li>
-                <li>من القائمة الجانبية ادخل على <strong>Firestore Database</strong> واضغط <strong>Create database</strong> (اختر Start in test mode).</li>
-                <li>اضغط على زر <strong>"حفظ واختبار الاتصال"</strong> بالأسفل، وسيتم تفعيل المزامنة السحابية فوراً!</li>
-              </ol>
+              <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <ol style={{ margin: 0, paddingRight: isAr ? '20px' : 0, paddingLeft: !isAr ? '20px' : 0, fontSize: '0.78rem', color: '#cbd5e1', lineHeight: 1.6 }}>
+                  <li>ادخل على <a href="https://console.firebase.google.com/project/fire-code-9603d/overview" target="_blank" rel="noreferrer" style={{ color: '#60a5fa' }}>مشروعك (fire-code-9603d)</a> ثم <strong>Project settings</strong> ➔ في الأسفل اضغط <code>&lt;/&gt;</code> وانسخ <code>apiKey</code>.</li>
+                  <li>من القائمة الجانبية ادخل على <strong>Authentication</strong> واضغط <strong>Get started</strong>، وفعل <strong>Anonymous</strong> أو الإيميل.</li>
+                  <li>في <strong>Firestore Database</strong> اضغط تبويب <strong>Rules</strong> وضع قواعد الأمان المعتمدة لحماية بيانات مشاريعك من القراءة أو التعديل غير المصرح به:</li>
+                </ol>
+
+                <div style={{
+                  background: '#090d16',
+                  border: '1px solid #334155',
+                  borderRadius: '8px',
+                  padding: '10px',
+                  position: 'relative',
+                  fontSize: '0.74rem',
+                  fontFamily: 'monospace',
+                  color: '#86efac'
+                }}>
+                  <button
+                    onClick={copySecureRules}
+                    style={{
+                      position: 'absolute',
+                      top: '6px',
+                      left: isAr ? '6px' : 'auto',
+                      right: !isAr ? '6px' : 'auto',
+                      background: copiedRules ? '#16a34a' : '#1e293b',
+                      color: '#fff',
+                      border: '1px solid #475569',
+                      padding: '3px 8px',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '0.7rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    {copiedRules ? <Check size={12} /> : <Copy size={12} />}
+                    <span>{copiedRules ? (isAr ? 'تم النسخ!' : 'Copied!') : (isAr ? 'نسخ القواعد' : 'Copy Rules')}</span>
+                  </button>
+                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+{`rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /projects/{projectId} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}`}
+                  </pre>
+                </div>
+              </div>
             )}
           </div>
 
@@ -11455,7 +13174,7 @@ export default function FirebaseSyncModal({
 
             <div>
               <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: '4px' }}>
-                Web API Key <span style={{ color: '#ef4444' }}>*</span> (مثال: AIzaSyC...)
+                Web API Key (من كونسول Firebase):
               </label>
               <input 
                 type="text"
@@ -11475,7 +13194,7 @@ export default function FirebaseSyncModal({
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div className="grid-2" style={{ gap: '10px' }}>
               <div>
                 <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: '4px' }}>
                   Project ID (مثبت لمشروعك):
@@ -11601,7 +13320,7 @@ export default function FirebaseSyncModal({
               <span>{isAr ? 'إجراءات المزامنة السحابية (Firestore Cloud Sync):' : 'Cloud Sync Operations:'}</span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div className="grid-2" style={{ gap: '10px' }}>
               {/* Push to Cloud */}
               <button
                 type="button"
@@ -11635,11 +13354,11 @@ export default function FirebaseSyncModal({
                 style={{
                   background: 'rgba(255, 255, 255, 0.08)',
                   color: '#f8fafc',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
                   padding: '12px 14px',
                   borderRadius: '10px',
                   fontSize: '0.82rem',
-                  fontWeight: 800,
+                  fontWeight: 700,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -11648,38 +13367,481 @@ export default function FirebaseSyncModal({
                 }}
               >
                 <DownloadCloud size={18} />
-                <span>{fetching ? (isAr ? 'جاري الاسترجاع...' : 'Fetching...') : (isAr ? 'استرجاع المشاريع من السحابة' : 'Restore from Cloud')}</span>
+                <span>{fetching ? (isAr ? 'جاري الجلب...' : 'Fetching...') : (isAr ? 'استرجاع ودمج من السحابة' : 'Fetch & Merge Cloud Projects')}</span>
               </button>
             </div>
-            
-            <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
-              {isAr 
-                ? 'ملاحظة: البيانات تحفظ محلياً على جهازك في LocalStorage وتتزامن سحابياً مع Firestore للنسخ الاحتياطي والعمل من أي جهاز.'
-                : 'Note: Projects are persisted in browser LocalStorage and synced to Firebase Firestore for cross-device backup.'}
-            </span>
           </div>
-
         </div>
 
+        {/* Modal Footer */}
+        <div style={{
+          padding: '14px 24px',
+          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+          background: 'rgba(0, 0, 0, 0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontSize: '0.76rem',
+          color: '#64748b'
+        }}>
+          <span>{isAr ? 'مزامنة آمنة • مشاريع كود الحريق المصري ٢٠٢٦' : 'Secure Cloud Sync • Egyptian Fire Code 2026'}</span>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#cbd5e1',
+              cursor: 'pointer',
+              fontWeight: 700,
+              textDecoration: 'underline'
+            }}
+          >
+            {isAr ? 'إغلاق النافذة' : 'Close'}
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
-```
+`
+
+================================================================================
+📁 ملف: src/components/AdminLoginModal.jsx
+================================================================================
+`jsx
+import React, { useState } from 'react';
+import { Lock, ShieldCheck, Key, Eye, EyeOff, X, Sparkles, CheckCircle2 } from 'lucide-react';
+
+export default function AdminLoginModal({ 
+  isOpen, 
+  onClose, 
+  onLoginSuccess, 
+  lang = 'ar' 
+}) {
+  const [pin, setPin] = useState('');
+  const [showPin, setShowPin] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [isSuccess, setIsSuccess] = useState(false);
+
+  if (!isOpen) return null;
+
+  const isAr = lang === 'ar';
+
+  const validPasscodes = ['2026', 'fawzy2026', 'ahmed2026', 'admin', 'fawzy'];
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setErrorMsg('');
+
+    const trimmed = pin.trim();
+    if (!trimmed) {
+      setErrorMsg(isAr ? 'يرجى إدخال رمز المرور' : 'Please enter the PIN');
+      return;
+    }
+
+    if (validPasscodes.includes(trimmed.toLowerCase())) {
+      setIsSuccess(true);
+      setTimeout(() => {
+        onLoginSuccess();
+        setIsSuccess(false);
+        setPin('');
+        onClose();
+      }, 700);
+    } else {
+      setErrorMsg(isAr 
+        ? 'رمز المرور غير صحيح. هذه اللوحة مخصصة لإدارة المهندس أحمد فوزي فقط.' 
+        : 'Invalid passcode. This portal is reserved for Eng. Ahmed Fawzy.');
+    }
+  };
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(15, 23, 42, 0.75)',
+      backdropFilter: 'blur(8px)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 99999,
+      padding: '16px'
+    }}>
+      <div style={{
+        background: '#ffffff',
+        borderRadius: '20px',
+        width: '100%',
+        maxWidth: '440px',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+        border: '1px solid #e2e8f0',
+        overflow: 'hidden',
+        animation: 'fadeIn 0.25s ease-out'
+      }}>
+        {/* Modal Header */}
+        <div style={{
+          background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)',
+          padding: '24px 24px 20px 24px',
+          color: '#ffffff',
+          position: 'relative'
+        }}>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              position: 'absolute',
+              top: '16px',
+              [isAr ? 'left' : 'right']: '16px',
+              background: 'rgba(255, 255, 255, 0.1)',
+              border: 'none',
+              borderRadius: '50%',
+              width: '32px',
+              height: '32px',
+              color: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer'
+            }}
+          >
+            <X size={16} />
+          </button>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{
+              width: '44px',
+              height: '44px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 4px 12px rgba(239, 68, 68, 0.4)',
+              flexShrink: 0
+            }}>
+              <Lock size={22} color="#ffffff" />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>
+                {isAr ? 'بوابة دخول المهندس المسؤول والمالك' : 'Engineer & Owner Portal'}
+              </h3>
+              <p style={{ margin: '4px 0 0 0', fontSize: '0.78rem', color: '#94a3b8' }}>
+                {isAr 
+                  ? 'المهندس / أحمد فوزي — مصمم ومطور المنظومة' 
+                  : 'Eng. Ahmed Fawzy — Lead Designer & Developer'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Modal Body */}
+        <div style={{ padding: '24px' }}>
+          {isSuccess ? (
+            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+              <div style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                background: '#dcfce7',
+                color: '#16a34a',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 16px auto'
+              }}>
+                <CheckCircle2 size={32} />
+              </div>
+              <h4 style={{ margin: '0 0 6px 0', fontSize: '1.1rem', color: '#0f172a', fontWeight: 800 }}>
+                {isAr ? 'تم التحقق بنجاح!' : 'Access Granted!'}
+              </h4>
+              <p style={{ margin: 0, fontSize: '0.86rem', color: '#64748b' }}>
+                {isAr ? 'مرحباً بك يا بشمهندس أحمد فوزي، تم تفعيل وضع المسؤول الكامل.' : 'Welcome Eng. Ahmed Fawzy, Admin mode is now active.'}
+              </p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '14px 16px',
+                fontSize: '0.84rem',
+                color: '#475569',
+                lineHeight: 1.5
+              }}>
+                {isAr 
+                  ? 'أهلاً بك يا بشمهندس أحمد. أدخل رمز المرور السريع لفتح لوحة التحكم وقاعدة بيانات Firebase وإعدادات المصادر.' 
+                  : 'Welcome Eng. Ahmed. Enter your PIN to unlock database controls, Firebase sync, and system settings.'}
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                  {isAr ? 'رمز مرور المسؤول (Admin PIN):' : 'Admin Passcode:'}
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showPin ? 'text' : 'password'}
+                    value={pin}
+                    onChange={(e) => setPin(e.target.value)}
+                    placeholder={isAr ? 'أدخل الرمز (مثال: 2026)' : 'Enter PIN (e.g. 2026)'}
+                    autoFocus
+                    style={{
+                      width: '100%',
+                      padding: '12px 40px 12px 14px',
+                      borderRadius: '10px',
+                      border: errorMsg ? '1.5px solid #ef4444' : '1.5px solid #cbd5e1',
+                      fontSize: '16px',
+                      outline: 'none',
+                      transition: 'border 0.2s ease',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPin(!showPin)}
+                    style={{
+                      position: 'absolute',
+                      [isAr ? 'left' : 'right']: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#94a3b8',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                  >
+                    {showPin ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                {errorMsg && (
+                  <div style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '6px', fontWeight: 600 }}>
+                    {errorMsg}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    borderRadius: '10px',
+                    border: '1px solid #cbd5e1',
+                    background: '#f8fafc',
+                    color: '#475569',
+                    fontSize: '0.88rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {isAr ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    flex: 1.5,
+                    padding: '12px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                    color: '#ffffff',
+                    fontSize: '0.88rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(239, 68, 68, 0.35)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <Key size={16} />
+                  <span>{isAr ? 'دخول المسؤول' : 'Unlock Admin'}</span>
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+`
+
+================================================================================
+📁 ملف: src/components/FireBrandLogo.jsx
+================================================================================
+`jsx
+import React from 'react';
+
+export default function FireBrandLogo({ size = 42, className = '' }) {
+  return (
+    <svg 
+      width={size} 
+      height={size} 
+      viewBox="0 0 512 512" 
+      fill="none" 
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      style={{ display: 'inline-block', verticalAlign: 'middle', filter: 'drop-shadow(0 4px 12px rgba(239, 68, 68, 0.45))' }}
+      aria-label="شعار كود الحريق ومكافحة الحريق"
+    >
+      <defs>
+        {/* Deep midnight protective shield gradient */}
+        <linearGradient id="navShieldBg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#1e1b4b" />
+          <stop offset="45%" stopColor="#0f172a" />
+          <stop offset="100%" stopColor="#020617" />
+        </linearGradient>
+
+        {/* Golden-Crimson Shield Border */}
+        <linearGradient id="navShieldRim" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#fbbf24" />
+          <stop offset="30%" stopColor="#f97316" />
+          <stop offset="70%" stopColor="#dc2626" />
+          <stop offset="100%" stopColor="#d97706" />
+        </linearGradient>
+
+        {/* Fire Extinguishing Water Arc Gradient */}
+        <linearGradient id="navWaterArc" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#38bdf8" />
+          <stop offset="50%" stopColor="#0284c7" />
+          <stop offset="100%" stopColor="#0369a1" />
+        </linearGradient>
+
+        {/* Central Fire Flame Gradient */}
+        <linearGradient id="navFlameGrad" x1="50%" y1="100%" x2="50%" y2="0%">
+          <stop offset="0%" stopColor="#b91c1c" />
+          <stop offset="25%" stopColor="#ea580c" />
+          <stop offset="60%" stopColor="#f59e0b" />
+          <stop offset="90%" stopColor="#fef08a" />
+          <stop offset="100%" stopColor="#ffffff" />
+        </linearGradient>
+
+        {/* Yellow Base Line Glow */}
+        <filter id="navGlowYellow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="4" result="blur" />
+          <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        </filter>
+      </defs>
+
+      {/* 1. Main Security Shield Base (درع الحماية ومقاومة الحريق) */}
+      <path 
+        d="M256 24 
+           C370 24 456 56 456 136 
+           C456 286 370 416 256 492 
+           C142 416 56 286 56 136 
+           C56 56 142 24 256 24 Z" 
+        fill="url(#navShieldBg)" 
+        stroke="url(#navShieldRim)" 
+        strokeWidth="18"
+        strokeLinejoin="round"
+      />
+
+      {/* 2. Inner Shield Highlight Ring */}
+      <path 
+        d="M256 44 
+           C352 44 430 72 430 142 
+           C430 274 352 392 256 462 
+           C160 392 82 274 82 142 
+           C82 72 160 44 256 44 Z" 
+        fill="none" 
+        stroke="rgba(255, 255, 255, 0.15)" 
+        strokeWidth="4"
+      />
+
+      {/* 3. The Engineering Fire Triangle (مثلث الحريق الهندسي) */}
+      {/* Side 1: Left Leg (Heat to Oxygen) */}
+      <line x1="256" y1="110" x2="130" y2="340" stroke="#f87171" strokeWidth="12" strokeLinecap="round" opacity="0.85" />
+      
+      {/* Side 2: Right Leg (Heat to Fuel) */}
+      <line x1="256" y1="110" x2="382" y2="340" stroke="#fb923c" strokeWidth="12" strokeLinecap="round" opacity="0.85" />
+
+      {/* Side 3: THE GOLDEN YELLOW BASE LINE (بين الوقود والأكسجين كما طلب المهندس) */}
+      <line 
+        x1="130" 
+        y1="340" 
+        x2="382" 
+        y2="340" 
+        stroke="#fde047" 
+        strokeWidth="16" 
+        strokeLinecap="round"
+        filter="url(#navGlowYellow)"
+      />
+
+      {/* Fire Triangle Vertex Points */}
+      {/* Heat (Top - Crimson Red) */}
+      <circle cx="256" cy="110" r="16" fill="#dc2626" stroke="#fef08a" strokeWidth="5" />
+      {/* Oxygen (Bottom Left - Sky Cyan) */}
+      <circle cx="130" cy="340" r="16" fill="#0284c7" stroke="#fef08a" strokeWidth="5" />
+      {/* Fuel (Bottom Right - Amber Orange) */}
+      <circle cx="382" cy="340" r="16" fill="#ea580c" stroke="#fef08a" strokeWidth="5" />
+
+      {/* 4. Fire Fighting Water Extinguishment Arc (قوس مكافحة وإخماد الحريق بالماء) */}
+      <path 
+        d="M170 320 
+           C125 250 145 170 205 130 
+           C168 170 172 240 215 285 
+           Z" 
+        fill="url(#navWaterArc)" 
+      />
+
+      {/* Water Droplet Accents (رذاذ أنظمة الإطفاء والرشاشات) */}
+      <circle cx="175" cy="155" r="9" fill="#38bdf8" />
+      <circle cx="150" cy="205" r="7" fill="#67e8f9" />
+      <circle cx="140" cy="260" r="8" fill="#38bdf8" />
+
+      {/* 5. Central Dynamic Fire Flame (شعلة الحريق المركزية القوية) */}
+      <path 
+        d="M256 150
+           C282 200 330 240 330 300
+           C330 355 292 385 256 385
+           C220 385 182 355 182 300
+           C182 250 215 210 236 180
+           C238 215 260 250 268 265
+           C276 235 270 195 256 150 Z" 
+        fill="url(#navFlameGrad)" 
+      />
+
+      {/* 6. High-Intensity White Hot Fire Core (لب الشعلة المتوهج) */}
+      <path 
+        d="M256 255
+           C272 285 288 310 288 335
+           C288 360 270 375 256 375
+           C242 375 224 360 224 335
+           C224 310 240 285 256 255 Z" 
+        fill="#ffffff" 
+        opacity="0.95"
+      />
+    </svg>
+  );
+}
+
+`
 
 ================================================================================
 📁 ملف: src/services/assessmentEngine.js
 ================================================================================
-```javascript
+`javascript
 // Egyptian Fire Code Assessment & Parser Engine
 // Strictly grounded in Egyptian Fire Code 2026 (الكود المصري لحماية المنشآت من أخطار الحريق)
 // Ministerial Decree No. 255 of 2026 (قرار وزاري رقم ٢٥٥ لسنة ٢٠٢٦)
+
+export const toLatinDigits = (s) => (s ? String(s).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)) : '');
 
 /**
  * Natural-language parser that extracts project facts from Arabic or English text
  */
 export function parseProjectDescription(text) {
+  const normText = toLatinDigits(text || '');
   const facts = {
     rawText: text,
     occupancyType: null,
@@ -11696,7 +13858,7 @@ export function parseProjectDescription(text) {
     detectedEntities: []
   };
 
-  const lower = text.toLowerCase();
+  const lower = normText.toLowerCase();
 
   // 1. Occupancy Detection
   const hasCommercial = lower.includes('تجار') || lower.includes('commercial') || lower.includes('محلات') || lower.includes('معارض') || lower.includes('مول') || lower.includes('mall') || lower.includes('سوبر ماركت');
@@ -11762,13 +13924,16 @@ export function parseProjectDescription(text) {
   }
 
   // 3. Above Ground Floors
-  // Patterns like:
-  // "أرضي و 5 علوي", "ارضى و 5 علوى", "أرضي و خمسة أدوار", "بدروم و أرضي و ٥ أدوار علوية", "5 علوي", "٦ أدوار"
-  const floorsUpperMatch = text.match(/(?:أرضي|ارضي|ارضى|ground)?\s*(?:و|\+)?\s*(?:بدروم\s*(?:و|\+)?)?\s*(?:أرضي|ارضي|ارضى|ground)?\s*(?:و|\+)?\s*(\d+|خمسة|ستة|سبعة|ثمانية|أربعة|اربعة|ثلاثة|اثنين|تسعة|عشرة)\s*(?:أدوار|ادوار|أداور|اداور|طوابق|طابق|دور)?\s*(?:علوية|علويه|علوي|علوى|متكررة|متكرره|متكرر)/i);
-  
-  const floorsArabicMatch = floorsUpperMatch || text.match(/(?:أرضي|ارضي|ارضى)\s*(?:و|\+)?\s*(?:بدروم\s*(?:و|\+)?)?\s*(خمسة|ستة|سبعة|ثمانية|أربعة|ثلاثة|اثنين|تسعة|عشرة|\d+)\s*(?:أدوار|ادوار|أداور|اداور|طوابق|طابق|دور)?(?:\s*(?:علوية|علويه|علوي|علوى|متكررة))?/i);
-  
+  // Fast, linear matching without catastrophic backtracking
   const wordMap = { 'اثنين': 2, 'ثلاثة': 3, 'أربعة': 4, 'اربعة': 4, 'خمسة': 5, 'ستة': 6, 'سبعة': 7, 'ثمانية': 8, 'تسعة': 9, 'عشرة': 10 };
+
+  // Explicit upper floors: e.g. "٥ أدوار متكررة", "5 علوي", "خمسة أدوار علوية"
+  const upperMatch = normText.match(/(\d+|خمسة|ستة|سبعة|ثمانية|أربعة|اربعة|ثلاثة|اثنين|تسعة|عشرة)\s*(?:أدوار|ادوار|أداور|اداور|طوابق|طابق|دور)?\s*(?:علوية|علويه|علوي|علوى|متكررة|متكرره|متكرر)/i);
+  
+  // Ground + upper: e.g. "أرضي و 5 أدوار", "ارضي + ٤"
+  const groundPlusMatch = !upperMatch && normText.match(/(?:أرضي|ارضي|ارضى|ground)\s*(?:و|\+)\s*(\d+|خمسة|ستة|سبعة|ثمانية|أربعة|اربعة|ثلاثة|اثنين|تسعة|عشرة)/i);
+
+  const floorsArabicMatch = upperMatch || groundPlusMatch;
 
   if (floorsArabicMatch) {
     const wordOrNum = floorsArabicMatch[1];
@@ -11778,7 +13943,7 @@ export function parseProjectDescription(text) {
     facts.aboveGroundFloors = upperCount + 1; // ground + upper
     facts.detectedEntities.push({ label: `أدوار فوق الأرض: ${facts.aboveGroundFloors} (أرضي + ${upperCount} علوي)`, text: floorsArabicMatch[0] });
   } else {
-    const generalFloors = text.match(/(\d+)\s*(?:طوابق|أدوار|ادوار|اداور|أداور|أدوار متكررة|ادوار علوية|اداور علوية|دور|floors)/i);
+    const generalFloors = normText.match(/(\d+)\s*(?:طوابق|أدوار|ادوار|اداور|أداور|أدوار متكررة|ادوار علوية|اداور علوية|دور|floors)/i);
     if (generalFloors) {
       const num = parseInt(generalFloors[1], 10);
       const hasGroundWord = lower.includes('أرضي') || lower.includes('ارضي') || lower.includes('ارضى') || lower.includes('ground');
@@ -11790,8 +13955,8 @@ export function parseProjectDescription(text) {
   }
 
   // 4. Building Height
-  const heightMatch = text.match(/(?:ارتفاع|height)(?:\s*(?:المبنى|is)?\s*(?:هو|يبلغ)?)?\s*(\d+(?:[.,]\d+)?)\s*(?:م|مترا|متراً|متر|m|meters)/i) ||
-                      text.match(/(\d+(?:[.,]\d+)?)\s*(?:م|مترا|متراً|متر|m|meters)\s*(?:ارتفاع|height)/i);
+  const heightMatch = normText.match(/(?:ارتفاع|height)(?:\s*(?:المبنى|is)?\s*(?:هو|يبلغ)?)?\s*(\d+(?:[.,]\d+)?)\s*(?:م|مترا|متراً|متر|m|meters)/i) ||
+                      normText.match(/(\d+(?:[.,]\d+)?)\s*(?:م|مترا|متراً|متر|m|meters)\s*(?:ارتفاع|height)/i);
   if (heightMatch) {
     facts.buildingHeight = parseFloat(heightMatch[1].replace(',', '.'));
     const floorRate = facts.occupancyType === 'residential' ? 3.0 : 3.3;
@@ -11826,8 +13991,8 @@ export function parseProjectDescription(text) {
   }
 
   // 5. Floor Area & Total Area
-  const areaMatch = text.match(/(?:على\s*)?(?:مساحة\s*الدور|مساحة|مسطح|floor\s*area)(?:\s*(?:هي|تبلغ|قدرها|is)?)?\s*([\d,]+(?:\.\d+)?)\s*(?:م٢|م2|متر مربع|متر|م|m2|sqm)/i) ||
-                    text.match(/([\d,]+(?:\.\d+)?)\s*(?:م٢|م2|متر مربع|m2|sqm)(?:\s*(?:لكل\s*دور|للدور|floor))?/i);
+  const areaMatch = normText.match(/(?:على\s*)?(?:مساحة\s*الدور|مساحة|مسطح|floor\s*area)(?:\s*(?:هي|تبلغ|قدرها|is)?)?\s*([\d,]+(?:\.\d+)?)\s*(?:م٢|م2|متر مربع|متر|م|m2|sqm)/i) ||
+                    normText.match(/([\d,]+(?:\.\d+)?)\s*(?:م٢|م2|متر مربع|m2|sqm)(?:\s*(?:لكل\s*دور|للدور|floor))?/i);
   if (areaMatch) {
     const rawNum = areaMatch[1].replace(/,/g, '');
     facts.floorArea = parseFloat(rawNum);
@@ -12087,7 +14252,7 @@ export function assessProjectAgainstCode(facts) {
   }
 
   if (isHighRise) {
-    smokeReqAr += `(٢) آبار السلالم: إلزامية تزويد آبار سلالم الهروب المغلقة بنظام ضغط هواء موجب (Positive Air Pressurization) بفارق ضغط ٢٥ إلى ٥٠ باسكال لمنع نفاذ الدخان لمسار الهروب.`;
+    smokeReqAr += `(٢) آبار السلالم: إلزامية تزويد آبار سلالم الهروب المغلقة بنظام ضغط هواء موجب (Positive Air Pressurization) بفارق ضغط ٥٠ باسكال (لا يتجاوز ٦٠ باسكال) عند غلق الأبواب، وبحد أدنى ٢٥ باسكال أو سرعة هواء ١٫٠ م/ث عند فتح الأبواب لمنع تسرب الدخان لمسار الهروب.`;
   } else {
     smokeReqAr += `(٢) آبار السلالم: في حال كانت السلالم محاطة بحوائط مصمتة ومغلقة بدون شبابيك على الواجهة الخارجية، يوصى كودياً بنظام ضغط هواء موجب لضمان سلامة مسار الهروب.`;
   }
@@ -12099,7 +14264,7 @@ export function assessProjectAgainstCode(facts) {
     category: 'التهوية الميكانيكية وضغط آبار السلالم',
     categoryEn: 'Mechanical Smoke Extraction & Stair Pressurization',
     requirementAr: smokeReqAr,
-    requirementEn: `${hasBasement ? 'Basement mechanical smoke exhaust (10 ACH) with 300°C/2h fans & make-up air.' : 'No basement smoke exhaust required (zero underground levels).'} ${isHighRise ? 'Pressurized staircases (25-50 Pa) mandatory for high-rise.' : 'Staircase ventilation provisions.'}`,
+    requirementEn: `${hasBasement ? 'Basement mechanical smoke exhaust (10 ACH) with 300°C/2h fans & make-up air.' : 'No basement smoke exhaust required (zero underground levels).'} ${isHighRise ? 'Pressurized staircases (50 Pa closed, min 25 Pa / 1.0 m/s open doors) mandatory for high-rise.' : 'Staircase ventilation provisions.'}`,
     codeReference: {
       docCode: '٣٠٥/١',
       docTitle: 'الكود المصري لحماية المنشآت من أخطار الحريق - الجزء الأول',
@@ -12238,13 +14403,13 @@ export function assessProjectAgainstCode(facts) {
 
   // A-3. Travel Distances & Dead-End Corridors (أقصى مسافات الارتحال والنهايات الميتة)
   const travelDistanceSourceText = isResidential
-    ? 'تُحدد أقصى مسافة ارتحال مسموح بها في الممرات المشتركة للإشغالات السكنية بـ ٢٠ متراً في المباني غير المحمية بالرشاشات و٣٠ متراً في المباني المحمية بالرشاشات التلقائية، ولا يجوز أن يتجاوز طول ممر النهاية الميتة (Dead-End) في الطوابق السكنية ٦ أمتار في المباني العادية أو ١٠ أمتار في المباني المحمية بالرشاشات. وتُقاس مسافة الارتحال من باب الشقة حتى مدخل درج الهروب المحمي.'
+    ? 'تُحدد أقصى مسافة ارتحال في الإشغالات السكنية (المجموعة ج) بـ ٣٠ متراً في المباني غير المحمية بالرشاشات و٤٥ متراً في المباني المحمية بالرشاشات التلقائية طبقاً لجدول ٤-٢ من الباب الرابع، مع قصر مسار الحركة المشترك داخل الشقة ذات المخرج الواحد على ١٥-٢٠ متراً، ولا يجوز أن يتجاوز طول ممر النهاية الميتة (Dead-End) في الطوابق السكنية ٦ أمتار في المباني العادية أو ١٠ أمتار في المباني المحمية بالرشاشات.'
     : (isCommercial
       ? 'تحدد أقصى مسافة ارتحال إلى أقرب مخرج بـ ٣٠ متراً في حالة عدم وجود رشاشات و٤٥ متراً في المباني التجارية المحمية بالرشاشات التلقائية، مع تحديد طول النهاية الميتة بـ ٦ أمتار كحد أقصى. ويجب قياس مسافة الارتحال على طول المسار الفعلي القابل للمشي الطبيعي من أبعد نقطة في الفراغ حتى الوصول إلى المخرج النهائي أو باب درج الهروب المحمي.'
       : 'تحدد أقصى مسافة ارتحال إلى أقرب مخرج بـ ٤٠ متراً (غير محمي) و٦٠ متراً (محمي بالرشاشات) للإشغال الإداري، مع تحديد طول النهاية الميتة بـ ٦ أمتار كحد أقصى تزيد إلى ١٥ متراً في الإداري المحمي بالرشاشات.');
 
   const travelDistReqAr = isResidential
-    ? 'تحديد أقصى مسافة ارتحال في ممرات الإشغال السكني المشتركة من باب أي شقة سكنية حتى باب أقرب درج هروب محمي بـ (٢٠ متراً) في المباني غير المحمية بالرشاشات، وتزاد إلى (٣٠ متراً) في المباني المحمية بالرشاشات التلقائية. تحديد طول النهاية الميتة في الممرات السكنية بـ (٦ أمتار كحد أقصى، وتصل إلى ١٠ أمتار مع الرشاشات)، وألا تزيد المسافة من أبعد نقطة داخل الشقة حتى باب خروجها عن ١٥ متراً.'
+    ? 'تحديد أقصى مسافة ارتحال في الإشغال السكني بـ (٣٠ متراً) في المباني غير المحمية بالرشاشات، وتزاد إلى (٤٥ متراً) في المباني المحمية بالكامل بالرشاشات التلقائية (مع مراعاة ألا تتعدى مسافة الهروب داخل الوحدة السكنية ذات المخرج الواحد ١٥ متراً حتى باب الشقة). تحديد طول ممرات النهاية الميتة بـ (٦ أمتار كحد أقصى، وتصل إلى ١٠ أمتار مع الرشاشات).'
     : `تحديد أقصى مسافة ارتحال مسموحة من أبعد نقطة في الدور حتى الوصول إلى باب أقرب درج هروب محمي بـ (${isCommercial ? 30 : 40} متراً) في المباني غير المحمية بالرشاشات، وتزاد إلى (${isCommercial ? 45 : 60} متراً) في المباني المحمية بالكامل بشبكة رشاشات مائية تلقائية. تحديد طول ممرات النهاية الميتة بـ (٦ أمتار كحد أقصى).`;
 
   findings.push({
@@ -12525,12 +14690,12 @@ export function assessProjectAgainstCode(facts) {
   };
 }
 
-```
+`
 
 ================================================================================
 📁 ملف: src/services/aiProvider.js
 ================================================================================
-```javascript
+`javascript
 // Pluggable AI Provider Layer for Egyptian Fire Code Assistant
 // Grounded in Ministerial Decree No. 255 of 2026 (القرار الوزاري رقم ٢٥٥ لسنة ٢٠٢٦)
 // Supported by the Housing and Building National Research Center (HBRC)
@@ -12577,11 +14742,12 @@ export const AI_PROVIDERS = [
   }
 ];
 
+export const toLatinDigits = (s) => (s ? String(s).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)) : '');
+
 // Arabic normalization utility for robust semantic matching
 export function normalizeArabic(text) {
   if (!text) return '';
-  return text
-    .toString()
+  return toLatinDigits(text)
     .replace(/[\u064B-\u065F\u0670]/g, '') // remove tashkeel (fatha, damma, etc.)
     .replace(/[أإآٱ]/g, 'ا')
     .replace(/ة/g, 'ه')
@@ -12589,7 +14755,7 @@ export function normalizeArabic(text) {
     .replace(/ؤ/g, 'و')
     .replace(/ئ/g, 'ي')
     .replace(/ـ/g, '') // remove tatweel
-    .replace(/[^\w\s\u0621-\u064A]/g, ' ') // replace non-word chars with space
+    .replace(/[^\w\s\u0621-\u064A]/g, ' ') // replace non-word chars with space (digits preserved via \w)
     .toLowerCase()
     .replace(/\s+/g, ' ')
     .trim();
@@ -12762,16 +14928,31 @@ export async function askCodeAssistant(query, projectContext = null, providerId 
   const qNorm = normalizeArabic(query);
   const qTokens = qNorm.split(' ').filter(t => t.length > 1 && !ARABIC_STOP_WORDS.has(t));
 
-  // 1. Check for specific conceptual topic match
+  // 1. Score and find the best conceptual topic match (highest score wins)
   let matchedConcept = null;
+  let bestConceptScore = 0;
+
   for (const concept of CONCEPT_MAPPINGS) {
-    const isKeywordMatch = concept.keywords.some(kw => {
+    let conceptScore = 0;
+    for (const kw of concept.keywords) {
       const normKw = normalizeArabic(kw);
-      return qNorm.includes(normKw) || qTokens.some(tok => normKw.includes(tok) && tok.length > 2);
-    });
-    if (isKeywordMatch) {
+      if (qNorm === normKw) {
+        conceptScore += 60; // exact phrase match
+      } else if (qNorm.includes(normKw)) {
+        conceptScore += 35; // contained phrase match
+      } else {
+        // Individual token matching: token must match a full word in keyword or have length >= 3
+        const kwTokens = normKw.split(' ');
+        for (const tok of qTokens) {
+          if (tok.length >= 3 && kwTokens.includes(tok)) {
+            conceptScore += 15;
+          }
+        }
+      }
+    }
+    if (conceptScore > bestConceptScore && conceptScore >= 20) {
+      bestConceptScore = conceptScore;
       matchedConcept = concept;
-      break;
     }
   }
 
@@ -12816,7 +14997,7 @@ export async function askCodeAssistant(query, projectContext = null, providerId 
       matchedProvisionsCount: 0,
       citation: null,
       exactSourceText: "لم يتم العثور على بند مباشر يتطابق حرفياً مع السؤال المدخل في بنود الكود المستخرجة حالياً الصادرة بقرار وزير الإسكان رقم ٢٥٥ لسنة ٢٠٢٦.",
-      plainExplanation: "حرصاً على الدقة ومنع أي ردود خاطئة (Zero Hallucination)، تم فحص الأجزاء الثلاثة للكود (٣٠٥/١ الإنشائي، ٣٠٥/٢ الميكانيكي، ٣٠٥/٣ الكهربائي والإنذار). يرجى تحديد الاستفسار باستخدام أحد المصطلحات الهندسية الشائعة مثل: 'اشتراطات غرف المحول'، 'مسافات الارتحال'، 'شبكات الرشاشات المائية'، 'عزل البدروم وسحب الدخان'، 'سلالم الهروب ومخارج الطوارئ'، أو 'طفايات الحريق اليدوية'.",
+      plainExplanation: "حرصاً على الأمانة الهندسية وتجنب التخمين غير المعتمد، تم فحص الأجزاء الثلاثة للكود (٣٠٥/١ الإنشائي، ٣٠٥/٢ الميكانيكي، ٣٠٥/٣ الكهربائي والإنذار) بالاعتماد على الاسترجاع المباشر للنصوص. يرجى تحديد الاستفسار باستخدام أحد المصطلحات الهندسية الشائعة مثل: 'اشتراطات غرف المحول'، 'مسافات الارتحال'، 'شبكات الرشاشات المائية'، 'عزل البدروم وسحب الدخان'، 'سلالم الهروب ومخارج الطوارئ'، أو 'طفايات الحريق اليدوية'.",
       aiAssessment: isGeneralMode
         ? "استعلام عام: المساعد متصل بنصوص الكود المصري العام (كود ٣٠٥ والقرار ٢٥٥ لسنة ٢٠٢٦) لكافة أنواع المنشآت."
         : "المساعد متصل حصراً بنصوص الكود المصري المعتمدة ولا يقوم بتأليف أو اختلاق نصوص غير واردة بالقرار ٢٥٥ لسنة ٢٠٢٦.",
@@ -12879,17 +15060,18 @@ export async function askCodeAssistant(query, projectContext = null, providerId 
   };
 }
 
-```
+`
 
 ================================================================================
 📁 ملف: src/services/firebaseConfig.js
 ================================================================================
-```javascript
+`javascript
 // Firebase Cloud Integration Layer for Egyptian Fire Code Assistant
 // Project: fire-code-9603d
 // Grounded in Egyptian Fire Protection Code 305 & Decree 255/2026
+// Prepared by: Eng. Ahmed Fawzy
 
-import { initializeApp, getApps, getApp } from 'firebase/app';
+import { initializeApp, getApps, getApp, deleteApp } from 'firebase/app';
 import { 
   getFirestore, 
   collection, 
@@ -12898,8 +15080,14 @@ import {
   getDoc, 
   getDocs, 
   deleteDoc, 
-  serverTimestamp 
+  serverTimestamp,
+  writeBatch 
 } from 'firebase/firestore';
+import { 
+  getAuth, 
+  signInAnonymously, 
+  onAuthStateChanged 
+} from 'firebase/auth';
 
 export const DEFAULT_FIREBASE_PROJECT_ID = 'fire-code-9603d';
 
@@ -12916,6 +15104,24 @@ export const DEFAULT_FIREBASE_CONFIG = {
 const STORAGE_KEY = 'fire_code_firebase_config';
 
 /**
+ * Recursively remove undefined values from an object to prevent Firestore errors
+ */
+export function sanitizeFirestoreData(data) {
+  if (data === null || data === undefined) return null;
+  if (typeof data !== 'object') return data;
+  if (data instanceof Date) return data.toISOString();
+  if (Array.isArray(data)) return data.map(sanitizeFirestoreData).filter(v => v !== undefined);
+  
+  const cleaned = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (value !== undefined) {
+      cleaned[key] = sanitizeFirestoreData(value);
+    }
+  }
+  return cleaned;
+}
+
+/**
  * Get current stored Firebase configuration from localStorage or default
  */
 export function getFirebaseConfig() {
@@ -12926,7 +15132,7 @@ export function getFirebaseConfig() {
       return {
         ...DEFAULT_FIREBASE_CONFIG,
         ...parsed,
-        projectId: DEFAULT_FIREBASE_PROJECT_ID // Ensure project ID remains locked to fire-code-9603d
+        projectId: DEFAULT_FIREBASE_PROJECT_ID
       };
     }
   } catch (e) {
@@ -12936,9 +15142,9 @@ export function getFirebaseConfig() {
 }
 
 /**
- * Persist new Firebase configuration (e.g. user pasted Web API Key from console)
+ * Persist new Firebase configuration and re-initialize Firebase client immediately
  */
-export function saveFirebaseConfig(config) {
+export async function saveFirebaseConfig(config) {
   try {
     const updated = {
       ...DEFAULT_FIREBASE_CONFIG,
@@ -12946,6 +15152,19 @@ export function saveFirebaseConfig(config) {
       projectId: DEFAULT_FIREBASE_PROJECT_ID
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+
+    // Reset current Firebase app instance so new API Key takes effect immediately without page reload
+    if (firebaseApp) {
+      try {
+        await deleteApp(firebaseApp);
+      } catch (e) {
+        console.warn('Error deleting previous Firebase App instance:', e);
+      }
+      firebaseApp = null;
+      firestoreDb = null;
+      firebaseAuth = null;
+    }
+
     return updated;
   } catch (e) {
     console.error('Error saving Firebase config:', e);
@@ -12954,37 +15173,48 @@ export function saveFirebaseConfig(config) {
 }
 
 /**
- * Initialize Firebase App instance safely
+ * Initialize Firebase App, Auth, and Firestore instances safely
  */
 let firebaseApp = null;
 let firestoreDb = null;
+let firebaseAuth = null;
 
 export function getFirebaseServices() {
   const config = getFirebaseConfig();
 
-  // If no API key is provided, return inactive state
   if (!config.apiKey || config.apiKey.trim() === '') {
     return {
       isReady: false,
       reason: 'missing_api_key',
       config,
-      db: null
+      db: null,
+      auth: null
     };
   }
 
   try {
-    if (!getApps().length) {
-      firebaseApp = initializeApp(config);
-    } else {
-      firebaseApp = getApp();
+    if (!firebaseApp) {
+      if (!getApps().length) {
+        firebaseApp = initializeApp(config);
+      } else {
+        firebaseApp = getApp();
+      }
     }
-    firestoreDb = getFirestore(firebaseApp);
+    
+    if (!firestoreDb) {
+      firestoreDb = getFirestore(firebaseApp);
+    }
+
+    if (!firebaseAuth) {
+      firebaseAuth = getAuth(firebaseApp);
+    }
 
     return {
       isReady: true,
       reason: 'connected',
       config,
-      db: firestoreDb
+      db: firestoreDb,
+      auth: firebaseAuth
     };
   } catch (err) {
     console.error('Firebase initialization error:', err);
@@ -12992,13 +15222,34 @@ export function getFirebaseServices() {
       isReady: false,
       reason: err.message,
       config,
-      db: null
+      db: null,
+      auth: null
     };
   }
 }
 
 /**
- * Test live connection to Firebase Firestore
+ * Ensure user is authenticated (e.g. anonymously or via token) for secure Firestore rules
+ */
+export async function ensureFirebaseAuth() {
+  const { isReady, auth } = getFirebaseServices();
+  if (!isReady || !auth) return null;
+
+  if (auth.currentUser) {
+    return auth.currentUser;
+  }
+
+  try {
+    const cred = await signInAnonymously(auth);
+    return cred.user;
+  } catch (err) {
+    console.warn('Firebase anonymous authentication notice:', err);
+    return null;
+  }
+}
+
+/**
+ * Test live connection to Firebase Firestore with Auth & Ping
  */
 export async function testFirebaseConnection() {
   const { isReady, db, reason } = getFirebaseServices();
@@ -13015,45 +15266,53 @@ export async function testFirebaseConnection() {
   }
 
   try {
-    // Attempt writing a test handshake document to _connection_check collection
+    // Authenticate user anonymously to comply with secure Firestore rules
+    const user = await ensureFirebaseAuth();
+
+    // Write a test handshake document to _connection_check collection
     const testDocRef = doc(db, '_connection_check', 'ping');
     await setDoc(testDocRef, {
       pingTime: serverTimestamp(),
       clientTimestamp: new Date().toISOString(),
       clientApp: 'Egyptian Fire Code Assistant 2026',
       designer: 'Eng. Ahmed Fawzy',
-      projectId: DEFAULT_FIREBASE_PROJECT_ID
+      projectId: DEFAULT_FIREBASE_PROJECT_ID,
+      authUid: user ? user.uid : 'anonymous_client'
     });
 
     return {
       success: true,
-      messageAr: 'تم الاتصال بقاعدة بيانات Firebase بنجاح! السحابة متصلة وجاهزة للمزامنة اللحظية.',
-      messageEn: 'Connected to Firebase Firestore successfully! Cloud database is ready for sync.'
+      authUid: user?.uid,
+      messageAr: 'تم الاتصال بقاعدة بيانات Firebase وتأكيد هوية الجلسة بنجاح! السحابة متصلة وجاهزة للمزامنة اللحظية.',
+      messageEn: 'Connected to Firebase Firestore & session verified successfully! Ready for cloud sync.'
     };
   } catch (err) {
     console.error('Firebase test connection failed:', err);
     return {
       success: false,
-      messageAr: `حدث خطأ أثناء الاتصال بقاعدة البيانات: ${err.message}. تأكد من تفعيل قواعد الحماية (Firestore Security Rules) في وحدة التحكم.`,
+      messageAr: `حدث خطأ أثناء الاتصال بقاعدة البيانات: ${err.message}. تأكد من تفعيل قواعد الحماية في وحدة التحكم.`,
       messageEn: `Connection error: ${err.message}. Please check Firestore Security Rules in Firebase Console.`
     };
   }
 }
 
 /**
- * Save a single project to Firestore
+ * Save a single project to Firestore safely
  */
 export async function saveProjectToFirestore(project) {
   const { isReady, db } = getFirebaseServices();
-  if (!isReady || !db) return false;
+  if (!isReady || !db || !project?.id) return false;
 
   try {
-    const docRef = doc(db, 'projects', project.id);
-    await setDoc(docRef, {
+    const user = await ensureFirebaseAuth();
+    const docRef = doc(db, 'projects', String(project.id));
+    const cleanData = sanitizeFirestoreData({
       ...project,
+      ownerId: user ? user.uid : 'default_owner',
       updatedAt: serverTimestamp(),
       cloudSyncTime: new Date().toISOString()
-    }, { merge: true });
+    });
+    await setDoc(docRef, cleanData, { merge: true });
     return true;
   } catch (err) {
     console.error('Error saving project to Firestore:', err);
@@ -13062,45 +15321,56 @@ export async function saveProjectToFirestore(project) {
 }
 
 /**
- * Sync entire projects list to Firestore
+ * Sync entire projects list to Firestore using writeBatch for atomic high performance
  */
-export async function syncProjectsToFirestore(projects) {
+export async function syncProjectsToFirestore(projects = []) {
   const { isReady, db } = getFirebaseServices();
   if (!isReady || !db) return { success: false, syncedCount: 0 };
+  if (!projects.length) return { success: true, syncedCount: 0 };
 
   try {
+    const user = await ensureFirebaseAuth();
+    const batch = writeBatch(db);
     let count = 0;
+
     for (const project of projects) {
-      const docRef = doc(db, 'projects', project.id);
-      await setDoc(docRef, {
+      if (!project?.id) continue;
+      const docRef = doc(db, 'projects', String(project.id));
+      const cleanData = sanitizeFirestoreData({
         ...project,
+        ownerId: user ? user.uid : 'default_owner',
         updatedAt: serverTimestamp(),
         cloudSyncTime: new Date().toISOString()
-      }, { merge: true });
+      });
+      batch.set(docRef, cleanData, { merge: true });
       count++;
     }
+
+    await batch.commit();
     return { success: true, syncedCount: count };
   } catch (err) {
-    console.error('Error syncing projects to Firestore:', err);
+    console.error('Error batch syncing projects to Firestore:', err);
     throw err;
   }
 }
 
 /**
- * Fetch all projects from Firestore
+ * Fetch all projects from Firestore with schema sanitization
  */
 export async function fetchProjectsFromFirestore() {
   const { isReady, db } = getFirebaseServices();
   if (!isReady || !db) return null;
 
   try {
+    await ensureFirebaseAuth();
     const colRef = collection(db, 'projects');
     const snapshot = await getDocs(colRef);
     const projects = [];
     snapshot.forEach(docSnap => {
+      const data = docSnap.data();
       projects.push({
         id: docSnap.id,
-        ...docSnap.data()
+        ...data
       });
     });
     return projects;
@@ -13115,10 +15385,10 @@ export async function fetchProjectsFromFirestore() {
  */
 export async function deleteProjectFromFirestore(projectId) {
   const { isReady, db } = getFirebaseServices();
-  if (!isReady || !db) return false;
+  if (!isReady || !db || !projectId) return false;
 
   try {
-    const docRef = doc(db, 'projects', projectId);
+    const docRef = doc(db, 'projects', String(projectId));
     await deleteDoc(docRef);
     return true;
   } catch (err) {
@@ -13127,12 +15397,12 @@ export async function deleteProjectFromFirestore(projectId) {
   }
 }
 
-```
+`
 
 ================================================================================
 📁 ملف: src/data/codeKnowledgeBase.js
 ================================================================================
-```javascript
+`javascript
 // Official Egyptian Fire Code Knowledge Base
 // Grounded in Ministerial Decree No. 255 of 2026 (قرار وزير الإسكان والمرافق والمجتمعات العمرانية رقم ٢٥٥ لسنة ٢٠٢٦)
 // Published by the Housing and Building National Research Center (HBRC - المركز القومي لبحوث الإسكان والبناء)
@@ -13953,8 +16223,8 @@ export const CODE_PROVISIONS = [
     page: "٥-١٠",
     subjectAr: "اشتراطات أدوار البدروم المستخدمة كجراجات لانتظار السيارات",
     subjectEn: "Basement Parking Garage Fire Safety",
-    sourceTextAr: "يجب عزل الأدوار أسفل منسوب سطح الأرض (البدرومات) المخصصة لانتظار السيارات عزلاً تاماً عن باقي إشغالات المبنى بفواصل أرضيات وحوائط مقاومة للحريق لمدة لا تقل عن ساعتين. ويلزم تزويد الجراج بنظام رشاشات تلقائية متصل بشبكة تغذية مياه مستمرة، ونظام ميكانيكي مستقل للتحكم في الدخان وسحبه بمعدل لا يقل عن ١٠ مرات تغيير هواء في الساعة في حالة الحريق، ولا يجوز أن يتصل درج الهروب من البدروم مباشرة بالأدوار العلوية دون حاجز فاصل ومخرج مباشر للهواء الطلق.",
-    plainExplanationAr: "جراجات البدروم تشكل خطورة خاصة بسبب دخان المركبات والوقود، ويلزم عزلها فنائياً بفاصل ساعتين وتزويدها بنظام رشاشات ونظام سحب دخان ميكانيكي (١٠ مرات/ساعة) وفصل سلالم الهروب الخاصة بها عن باقي أدوار المبنى بمخرج مباشر للخارج.",
+    sourceTextAr: "يجب عزل الأدوار أسفل منسوب سطح الأرض (البدرومات) المخصصة لانتظار السيارات عزلاً تاماً عن باقي إشغالات المبنى بفواصل أرضيات وحوائط مقاومة للحريق لمدة لا تقل عن ساعتين. ويلزم تزويد الجراج بنظام رشاشات تلقائية متصل بشبكة تغذية مياه مستمرة، ونظام ميكانيكي مستقل للتحكم في الدخان وسحبه بمعدل لا يقل عن ١٠ مرات تغيير هواء في الساعة (10 ACH) لجراجات انتظار السيارات، و ٦ مرات تغيير هواء في الساعة (6 ACH) للأدوار أسفل الأرض ذات الإشغالات العادية، وتكون المراوح معتمدة لمقاومة ٣٠٠°م لمدة ساعتين، ولا يجوز أن يتصل درج الهروب من البدروم مباشرة بالأدوار العلوية دون حاجز فاصل ومخرج مباشر للهواء الطلق.",
+    plainExplanationAr: "جراجات البدروم تشكل خطورة خاصة بسبب دخان المركبات والوقود، ويلزم عزلها فنائياً بفاصل ساعتين وتزويدها بنظام رشاشات ونظام سحب دخان ميكانيكي (١٠ مرات/ساعة للجراجات و٦ مرات/ساعة للإشغال العادي) وفصل سلالم الهروب الخاصة بها عن باقي أدوار المبنى بمخرج مباشر للخارج.",
     applicabilityCondition: "Basement used for parking or storage",
     tags: ["بدروم", "جراج سيارات", "عزل ساعتين", "سحب دخان", "فصل السلالم"]
   },
@@ -13985,8 +16255,8 @@ export const CODE_PROVISIONS = [
     page: "٤-١٢",
     subjectAr: "سعة المخارج والأبواب وسلالم الهروب ومعدل تدفق الشاغلين",
     subjectEn: "Egress Width, Capacity, and Staircase Enclosure",
-    sourceTextAr: "يُحسب عرض مسالك الهروب على أساس معامل استيعاب قدره (٥ مليمتر لكل شخص) للأبواب والممرات الأفقية و(٧٫٥ مليمتر لكل شخص) لسلالم الهروب في المباني المحمية بنظام رشاشات تلقائية، ويرتفع إلى (٧٫٥ مليمتر و ١٠ مليمتر) في المباني غير المحمية برشاشات. ولا يجوز بأي حال أن يقل العرض الصافي لدرج سلم الهروب الرئيسي عن ١٫٢٠ متراً أو عرض الباب الصافي عن ٠٫٩٠ متراً. وتفتح جميع أبواب المخارج في اتجاه حركة الهروب وتكون ذاتية الإغلاق وبمقاومة حريق لا تقل عن ساعة.",
-    plainExplanationAr: "عرض أبواب وسلالم الهروب يرتبط بعدد الشاغلين المتوقعين؛ بحيث لا يقل عرض السلم عن ١٫٢٠م وعرض الباب عن ٠٫٩٠م، وتفتح الأبواب جهة الخارج وتكون مقاومة للحريق وتغلق تلقائياً.",
+    sourceTextAr: "يُحسب عرض مسالك الهروب على أساس معامل استيعاب قدره (٧٫٦ مم/شخص) لسلالم الهروب و(٥٫٠ مم/شخص) للأبواب والممرات الأفقية في المباني غير المحمية بنظام رشاشات مائية تلقائية، وينخفض المعامل إلى (٥٫٠ مم/شخص) لسلالم الهروب و(٣٫٨ مم/شخص) للأبواب والممرات الأفقية في المباني المحمية بالكامل بنظام رشاشات تلقائية طبقاً للبند ٤-١-٣ والبند ٤-٤-٢. ولا يجوز بأي حال أن يقل العرض الصافي لدرج سلم الهروب الرئيسي عن ١٫٢٠ متراً (أو ١٫١٠م في المباني الصغيرة) أو عرض الباب الصافي عن ٠٫٩٠ متراً. وتفتح جميع أبواب المخارج في اتجاه حركة الهروب وتكون ذاتية الإغلاق وبمقاومة حريق لا تقل عن ساعة.",
+    plainExplanationAr: "عرض أبواب وسلالم الهروب يرتبط بعدد الشاغلين المتوقعين بمعامل ٧٫٦ مم/شخص للسلالم و٥٫٠ مم للأبواب (ينخفض إلى ٥٫٠ مم و٣٫٨ مم بوجود الرشاشات)؛ بحيث لا يقل عرض السلم عن ١٫٢٠م وعرض الباب عن ٠٫٩٠م، وتفتح الأبواب جهة الخارج وتكون مقاومة للحريق وتغلق تلقائياً.",
     applicabilityCondition: "General Building Egress",
     tags: ["مسالك هروب", "عرض السلم", "عرض الباب", "سعة المخرج", "أبواب حريق"]
   },
@@ -14097,8 +16367,8 @@ export const CODE_PROVISIONS = [
     page: "١-١٠ إلى ١-١٦",
     subjectAr: "شبكة الرشاشات التلقائية وتصنيف درجات الخطورة (البدرومات والأدوار المتكررة)",
     subjectEn: "Automatic Sprinklers Hazard Classification (Basement & Upper Floors)",
-    sourceTextAr: "تُصنف درجات الخطورة الإشغالية وفقاً لكود ٣٠٥/٢ إلى: (أ) خطورة خفيفة (Light Hazard): تشمل المكاتب والمباني الإدارية والتعليمية والمستشفيات، وتصمم بكثافة ٠٫١٠ جالون/دقيقة/قدم² (٤٫١ مم/دقيقة) على مساحة تصميمية ١٥٠٠ قدم² (١٣٩ م²). (ب) خطورة عادية - المجموعة الثانية (Ordinary Hazard Group 2): تشمل جراجات انتظار السيارات بالبدروم، والمحلات والمراكز التجارية، والمخازن العامة العادية، وتصمم بكثافة ٠٫٢٠ جالون/دقيقة/قدم² (٨٫٢ مم/دقيقة) على مساحة ١٥٠٠ قدم². ويلزم تركيب شبكة رشاشات مائية رطبة تلقائية شاملة في كافة أدوار البدروم أياً كانت مساحتها إذا استُخدمت كجراجات أو مخازن أو كانت مساحتها أكبر من ٢٠٠ م²، وتزويد كل طابق بصمام تحكم منفصل (Floor Control Valve) مزود بمفتاح سريان ومحبس إشرافي ومقياس ضغط وصمام تصريف واختبار.",
-    plainExplanationAr: "المكاتب تصنف خطورة خفيفة، بينما التجاري وجراجات البدروم والمخازن تصنف خطورة عادية (OH2) وتتطلب كثافة تدفق مضاعفة. حماية البدروم بالرشاشات إلزامية تماماً إذا كان جراجاً أو مخزناً، كما أن وجود الرشاشات في الأدوار يتيح مضاعفة مسافات الارتحال وتوسيع تباعد السلالم.",
+    sourceTextAr: "تُصنف درجات الخطورة الإشغالية وفقاً لكود ٣٠٥/٢ إلى: (أ) خطورة خفيفة (Light Hazard): تشمل المكاتب والمباني الإدارية والتعليمية والمستشفيات، وتصمم بكثافة ٠٫١٠ جالون/دقيقة/قدم² (٤٫١ مم/دقيقة) على مساحة تصميمية ١٥٠٠ قدم² (١٣٩ م²). (ب) خطورة عادية - المجموعة الثانية (Ordinary Hazard Group 2): تشمل جراجات انتظار السيارات بالبدروم، والمحلات والمراكز التجارية، والمخازن العامة العادية، وتصمم بكثافة ٠٫٢٠ جالون/دقيقة/قدم² (٨٫٢ مم/دقيقة) على مساحة ١٥٠٠ قدم². ويلزم تركيب شبكة رشاشات مائية رطبة تلقائية شاملة في كافة أدوار البدروم أياً كانت مساحتها إذا استُخدمت كجراجات أو مخازن أو كانت مساحة الدور أكبر من ٢٥٠ م² (أو أكبر من ٢٠٠ م² لجراجات ومخازن البدروم طبقاً للبند ٥-٢ من كود ٣٠٥/١ والباب الأول من كود ٣٠٥/٢)، وتزويد كل طابق بصمام تحكم منفصل (Floor Control Valve) مزود بمفتاح سريان ومحبس إشرافي ومقياس ضغط وصمام تصريف واختبار.",
+    plainExplanationAr: "المكاتب تصنف خطورة خفيفة، بينما التجاري وجراجات البدروم والمخازن تصنف خطورة عادية (OH2) وتتطلب كثافة تدفق مضاعفة. حماية البدروم بالرشاشات إلزامية إذا زادت مساحته عن ٢٥٠ م² (أو ٢٠٠ م² للجراج والمخازن)، كما أن وجود الرشاشات في الأدوار يتيح مضاعفة مسافات الارتحال وتوسيع تباعد السلالم.",
     applicabilityCondition: "All Occupancies with Sprinkler Protection or Basement",
     tags: ["رشاشات تلقائية", "خطورة خفيفة", "خطورة عادية", "جراج بدروم", "صمام تحكم FCV", "كثافة التصميم"]
   },
@@ -14407,12 +16677,12 @@ export const SAMPLE_PROJECTS = [
   }
 ];
 
-```
+`
 
 ================================================================================
 📁 ملف: src/data/rejectionKnowledgeBase.js
 ================================================================================
-```javascript
+`javascript
 // Egyptian Fire Code 305 & Decree 255/2026
 // Common Civil Protection Rejection Reasons & Official Code Interpretations Knowledge Base
 // Prepared by: Eng. Ahmed Fawzy - Fire Fighting & Alarm Systems Engineer
@@ -14435,8 +16705,8 @@ export const COMMON_REJECTIONS = [
     titleEn: 'Exit doors swinging against the direction of egress travel',
     authorityNoteAr: 'مرفوض: تلاحظ بالمساقط المعمارية فتح أبواب قاعات التجمع / المكاتب الرئيسية عكس اتجاه تدفق الهروب مما يسبب تدافعاً مميتاً عند الطوارئ.',
     authorityNoteEn: 'Rejected: Exit doors serve > 50 occupants and swing inward against the direction of exit travel.',
-    codeClauseAr: 'الكود المصري لحماية المنشآت من الحريق (كود ٣٠٥) - الجزء الأول - الباب الثالث (مسالك الهروب)، بند ٣-٤-٢: يجب أن تفتح أبواب مخارج الطوارئ ومسارات الهروب في اتجاه تدفق الخروج إذا زاد إشغال الحيز عن ٥٠ شخصاً أو في الإشغالات عالية الخطورة.',
-    codeClauseEn: 'EFC 305 Part 1 Clause 3-4-2: Exit doors must swing in the direction of exit travel when occupant load exceeds 50 persons.',
+    codeClauseAr: 'الكود المصري لحماية المنشآت من الحريق (كود ٣٠٥) - الجزء الأول - الباب الرابع (مسالك الهروب)، بند ٤-٣-٢: يجب أن تفتح أبواب مخارج الطوارئ ومسارات الهروب في اتجاه تدفق الخروج إذا زاد إشغال الحيز عن ٥٠ شخصاً أو في الإشغالات عالية الخطورة.',
+    codeClauseEn: 'EFC 305 Part 1 Chapter 4 Clause 4-3-2: Exit doors must swing in the direction of exit travel when occupant load exceeds 50 persons.',
     violationDetailsAr: 'تصميم أبواب القاعات ذات السعة التي تزيد عن ٥٠ شاغلاً لتفتح إلى الداخل نحو الحيز وليس نحو الممر أو الردهة، أو فتح باب مخرج الطوارئ في الدور الأرضي نحو الداخل.',
     approvedSolutionAr: 'تعديل تفصيلة الباب ليفتح للخارج مع اتجاه الهروب بمفصلات مناسبة، مع تزويده بجهاز ذعر (Panic Hardware / Push Bar) إذا زاد الإشغال عن ١٠٠ شخص، والتأكد من ألا يتعدى بروز درفة الباب أثناء فتحه نصف عرض الممر على الأقل.',
     wrongPracticeAr: '❌ فتح الباب نحو الداخل بحجة توفير مساحة في الممر الخارجي.',
@@ -14451,8 +16721,8 @@ export const COMMON_REJECTIONS = [
     titleEn: 'Failure to interrupt exit stair continuity at ground floor level',
     authorityNoteAr: 'مرفوض: قطاع السلم مستمر من الأدوار العليا إلى البدروم مباشرة دون فاصل معماري مقاوم للحريق، مما قد يقود الهاربين مباشرة إلى منطقة الخطر بالبدروم.',
     authorityNoteEn: 'Rejected: Stair enclosure is continuous between upper floors and basement without physical separation or positive discharge at grade level.',
-    codeClauseAr: 'الكود المصري ٣٠٥ - الجزء الأول - الباب الثالث بند ٣-٥-٧، والقرار ٢٥٥ لسنة ٢٠٢٦: يجب فصل بئر درج الهروب الصاعد من البدروم تماماً عن السلم الهابط من الأدوار العلوية، بحيث يُفرغ السلم مباشرة إلى الخارج في منسوب الدور الأرضي بحاجز مقاوم للحريق لا يقل عن ساعتين.',
-    codeClauseEn: 'EFC 305 Clause 3-5-7: Stairs serving basements must be physically interrupted and separated from stairs serving floors above grade.',
+    codeClauseAr: 'الكود المصري ٣٠٥ - الجزء الأول - الباب الرابع (مسالك الهروب - السلالم) بند ٤-٤-٥، والقرار ٢٥٥ لسنة ٢٠٢٦: يجب فصل بئر درج الهروب الصاعد من البدروم تماماً عن السلم الهابط من الأدوار العلوية، بحيث يُفرغ السلم مباشرة إلى الخارج في منسوب الدور الأرضي بحاجز مقاوم للحريق لا يقل عن ساعتين.',
+    codeClauseEn: 'EFC 305 Part 1 Chapter 4 Clause 4-4-5: Stairs serving basements must be physically interrupted and separated from stairs serving floors above grade.',
     violationDetailsAr: 'استمرار الدرج بدون توقف في الدور الأرضي، مما يجعل الشاغل أثناء الهرب في الظلام والدخان يستمر بالنزول تلقائياً إلى البدروم المحترق بدلاً من الخروج للشارع.',
     approvedSolutionAr: 'عمل كسر للمسار في الدور الأرضي بباب يفتح للخارج إلى الرصيف أو فناء الإفراغ النهائي، ووضع جدار فاصل مقاوم للحريق ٢ ساعة مع لوحة إرشادية مضيئة واضحة تدل على مخرج الإفراغ النهائي.',
     wrongPracticeAr: '❌ سلم حلزوني أو مستقيم موحد من الدور الخامس حتى البدروم الثاني دون أي باب فاصل في الدور الأرضي.',
@@ -14467,8 +16737,8 @@ export const COMMON_REJECTIONS = [
     titleEn: 'Locating electrical rooms/transformers adjacent to exit enclosures without rated separation',
     authorityNoteAr: 'مرفوض: فتح أبواب غرف لوحات التوزيع الرئيسية والمحولات مباشرة على ممرات الهروب الرئيسية أو ردهة سلم الطوارئ دون ردهة عازلة مقاومة للحريق.',
     authorityNoteEn: 'Rejected: Electrical panels and transformer rooms open directly into exit corridors or protected stair vestibules.',
-    codeClauseAr: 'الكود المصري ٣٠٥ - الجزء الأول - الباب الثاني (القطاعات الحريقية) بند ٢-٣-٤: يجب فصل غرف الكهرباء والمولدات والمحولات بحوائط مقاومة للحريق لا تقل عن ساعتين (٢ ساعة)، ويُحظر أن تفتح أبوابها على آبار السلالم المحمية أو مسارات الهروب الرئيسية إلا من خلال ردهة مستقلة.',
-    codeClauseEn: 'EFC 305 Clause 2-3-4: Transformer and electrical rooms require minimum 2-hour fire-rated enclosures and must not discharge hazard into primary exitways.',
+    codeClauseAr: 'الكود المصري ٣٠٥ - الجزء الأول - الباب الثالث (القطاعات ومقاومة الحريق) بند ٣-٢-٤: يجب فصل غرف الكهرباء والمولدات والمحولات بحوائط مقاومة للحريق لا تقل عن ساعتين (٢ ساعة)، ويُحظر أن تفتح أبوابها على آبار السلالم المحمية أو مسارات الهروب الرئيسية إلا من خلال ردهة مستقلة.',
+    codeClauseEn: 'EFC 305 Part 1 Chapter 3 Clause 3-2-4: Transformer and electrical rooms require minimum 2-hour fire-rated enclosures and must not discharge hazard into primary exitways.',
     violationDetailsAr: 'استغلال الحوائط الملاصقة لسلم الهروب لوضع لوحات كهرباء ضغط منخفض أو أبواب غرف كابلات، مما يشكل خطورة اندلاع حريق وانبعاث دخان سام يغلق مسار النجاة الوحيد.',
     approvedSolutionAr: 'نقل أبواب غرف الكهرباء لتفتح على مساحات خدمة أو ممرات ثانوية جيدة التهوية، واستخدام أبواب مقاومة للحريق ٩٠ دقيقة ذاتية الإغلاق (Self-closing UL/FM Listed)، وتمرير الكابلات عبر غوالق مانعة للحريق (Firestop System).',
     wrongPracticeAr: '❌ وضع لوحة الكهرباء الرئيسية أو باب غرفة المولد في ردهة سلم النجاة المحمي.',
@@ -14483,8 +16753,8 @@ export const COMMON_REJECTIONS = [
     titleEn: 'Exceeding permissible dead-end corridor length',
     authorityNoteAr: 'مرفوض: طول الممر الأعمى المؤدي إلى المكاتب الجانبية يتجاوز ٦ أمتار في مبنى غير مزود برشاشات مياه تلقائية.',
     authorityNoteEn: 'Rejected: Dead-end corridor length exceeds permissible limits under Egyptian Fire Code 305.',
-    codeClauseAr: 'الكود المصري ٣٠٥ - الجزء الأول - الباب الثالث بند ٣-٣-٥: لا يجوز أن يزيد طول النهاية المسدودة عن ٦ أمتار في المباني غير المزودة بمرشات مياه، أو ١٥ متراً في المباني المحمية بالكامل بشبكة رشاشات مياه تلقائية معتمدة.',
-    codeClauseEn: 'EFC 305 Clause 3-3-5: Dead-end corridors must not exceed 6 meters (non-sprinklered) or 15 meters (fully sprinklered).',
+    codeClauseAr: 'الكود المصري ٣٠٥ - الجزء الأول - الباب الرابع (مسالك الهروب - النهايات المسدودة) بند ٤-٢-٣: لا يجوز أن يزيد طول النهاية المسدودة عن ٦ أمتار في المباني غير المزودة بمرشات مياه، أو ١٥ متراً في المباني المحمية بالكامل بشبكة رشاشات مياه تلقائية معتمدة.',
+    codeClauseEn: 'EFC 305 Part 1 Chapter 4 Clause 4-2-3: Dead-end corridors must not exceed 6 meters (non-sprinklered) or 15 meters (fully sprinklered).',
     violationDetailsAr: 'امتداد الممر لمسافة ١٢ إلى ١٨ متراً دون وجود مخرج ثانٍ في نهايته، مما يحصر الشاغلين في حال اندلاع حريق بين مدخل الممر والغرف المغلقة.',
     approvedSolutionAr: 'إعادة توزيع المخطط المعماري بإنشاء مخرج ثانٍ، أو توفير ممر دائري، أو تقصير الممر ليصبح أقل من ٦ أمتار، أو تزويد المبنى بشبكة رشاشات مياه لرفع الحد المسموح إلى ١٥ متراً.',
     wrongPracticeAr: '❌ ممر طوله ٢٠ متراً ينتهي بجدار مغلق ولا يؤدي إلا لاتجاه سير واحد للخلف.',
@@ -14531,8 +16801,8 @@ export const COMMON_REJECTIONS = [
     titleEn: 'Absence of stairwell pressurization system in buildings exceeding 16 meters',
     authorityNoteAr: 'مرفوض: سلم الهروب الداخلي مغلق تماماً وارتفاع المبنى يتجاوز ١٦ متراً دون تصميم شبكة ضغط موجب لمنع نفاذ الدخان إلى بئر السلم.',
     authorityNoteEn: 'Rejected: Enclosed exit stairwell lacks mechanical pressurization system required for mid-rise & high-rise buildings.',
-    codeClauseAr: 'الكود المصري ٣٠٥ - الجزء الثالث - الباب السادس (التحكم في الدخان) والقرار ٢٥٥/٢٠٢٦: يجب تزويد آبار سلالم الهروب الداخلية المغلقة في المباني التي يزيد ارتفاعها عن ١٦ متراً أو المباني ذات البدرومات المتعددة بنظام تهوية ميكانيكية بالضغط الموجب (Staircase Pressurization) يحافظ على فارق ضغط بين ٢٥ إلى ٥٠ باسكال عند فتح الأبواب.',
-    codeClauseEn: 'EFC 305 Part 3 Clause 6: Enclosed stairwells in buildings > 16m require mechanical pressurization maintaining 25-50 Pa differential.',
+    codeClauseAr: 'الكود المصري ٣٠٥ - الجزء الثالث - الباب الخامس (التحكم في الدخان وهندسة التهوية) والقرار ٢٥٥/٢٠٢٦: يجب تزويد آبار سلالم الهروب الداخلية المغلقة في المباني التي يزيد ارتفاعها عن ١٦ متراً أو المباني ذات البدرومات المتعددة بنظام تهوية ميكانيكية بالضغط الموجب (Staircase Pressurization) يحافظ على فارق ضغط ٥٠ باسكال (لا يتجاوز ٦٠ باسكال) عند غلق الأبواب، وبحد أدنى ٢٥ باسكال أو سرعة هواء ١٫٠ م/ث عند فتح الأبواب لمنع نفاذ الدخان إلى بئر السلم.',
+    codeClauseEn: 'EFC 305 Part 3 Chapter 5: Enclosed stairwells in buildings > 16m require mechanical pressurization maintaining 50 Pa differential with doors closed (min 25 Pa or 1.0 m/s airflow with doors open).',
     violationDetailsAr: 'اعتبار السلم آمناً بمجرد إحاطته بجدران مصمتة دون دراسة ميكانيكية لمنع سحب الدخان الساخن إلى داخل البئر بفعل تأثير المدخنة (Stack Effect).',
     approvedSolutionAr: 'تقديم حسابات معدل تدفق مراوح الضغط الموجب (CFM) مع مخارج هواء موزعة رأسياً كل ٣ أدوار، ولوحة تحكم تلقائية مرتبطة بحساسات كشف الدخان ونظام تغذية كهربائية من مولد الطوارئ.',
     wrongPracticeAr: '❌ الاعتماد على شباك صغير غير كافٍ في البسطة للتهوية الطبيعية في مبنى ارتفاعه يتجاوز ٢٠ متراً.',
@@ -14565,6 +16835,7 @@ export const CODE_INTERPRETATIONS = [
     questionAr: 'هل يُحسب ارتفاع المبنى في الكود المصري حتى ظهر بلاطة السطح الأخير (Roof Slab)، أم حتى بلاطة أرضية أعلى دور مسكون؟ وما الفرق بين حدي ١٦م و٢٢م؟',
     questionEn: 'Is building height calculated to the top of the roof slab, or to the finished floor of the uppermost occupied level? What is the difference between the 16m and 22m thresholds?',
     officialRulingAr: 'وفقاً لتعريفات الكود المصري ٣٠٥ (الجزء الأول - الباب الأول والباب الخامس) والقرار الوزاري رقم ٢٥٥ لسنة ٢٠٢٦: يُقاس "ارتفاع المبنى المعتمد لاشتراطات مسالك الهروب والحماية المدنية" من منسوب سطح الشارع أو مسار وصول سيارات الإطفاء وحتى منسوب بلاطة أرضية أعلى طابق مسكون (Finished Floor Level of Highest Occupied Story)، ولا يشمل ذلك غرف الخدمات غير المسكونة أو أجهزة التكييف بالسطح. ويُصنف المبنى كـ "مبنى مرتفع (High-Rise)" إذا تجاوز منسوب أعلى طابق مأهول: ١٦ متراً في الإشغال السكني، أو ٢٢ متراً في الإشغالات التجارية والإدارية والتجمعية وكافة المنشآت غير السكنية (حيث يلزم توفير مصعد إطفاء مخصص وردهات دخان محمية وشبكة رشاشات مائية شاملة).',
+    officialRulingEn: 'Under Egyptian Fire Code 305 (Part 1 Chapters 1 & 5) and Decree 255/2026, building height for egress and life safety is measured from the street/fire access grade to the finished floor level of the uppermost occupied story. A building is classified as High-Rise when the highest occupied floor exceeds 16 meters for residential occupancy, or 22 meters for mercantile, business, assembly and non-residential occupancies, requiring mandatory Firefighter Lifts, pressurized staircases, and full automatic sprinkler protection.',
     engineeringImpactAr: 'هذا التفسير حاسم جداً؛ فإذا كان المبنى تجارياً/إدارياً مكوناً من أرضي + ٥ أدوار وكان منسوب أرضية الدور الخامس عند +١٨٫٠٠م، فإنه يقل عن حد المبنى المرتفع (٢٢م). أما إذا كان المبنى سكنياً وتجاوز منسوب أرضية الدور الأخير +١٦٫٠٠م، أو كان غير سكني وتجاوز +٢٢٫٠٠م، فإنه يدخل فوراً في نطاق اشتراطات المباني المرتفعة ويخضع لاشتراطات الضغط الموجب ومصاعد الإطفاء والرشاشات التلقائية الشاملة.',
     keyRuleAr: 'قاعدة ذهبية: ارتفاع الحماية المدنية = أرضية أعلى دور مشغول - منسوب الشارع (١٦م للسكني، ٢٢م للإداري والتجاري والمنشآت غير السكنية لمصاعد الإطفاء والرشاشات).',
     category: 'height'
@@ -14573,11 +16844,12 @@ export const CODE_INTERPRETATIONS = [
     id: 'interp-02',
     topicAr: 'الفرق الحاسم بين مسافة الارتحال المباشرة والحقيقية (Travel Distance)',
     topicEn: 'Difference between direct line of travel and actual travel path',
-    questionAr: 'هل تقاس مسافة الارتحال حتى المخرج بخط مستقيم نظري أم بمسار الحركة الفعلي مع وجود القواطع والأثاث؟',
-    questionEn: 'Is travel distance measured as a straight line, or along the actual path of natural walking travel around partitions?',
-    officialRulingAr: 'يؤكد الكود المصري ٣٠٥ - الجزء الأول (الباب الثالث): تقاس مسافة الارتحال على طول المسار الطبيعي الحقيقي الذي يسلكه الشخص سيراً على الأقدام، على بُعد ٣٠ سم من الحوائط والزوايا وحول الحواجز والمكاتب، حتى الوصول إلى باب المخرج المحمي أو السلم، ولا يجوز احتسابها بخط مستقيم يخترق الجدران أو الأثاث الثابت.',
-    engineeringImpactAr: 'إذا كانت المسافة المستقيمة بين أبعد نقطة والباب ٢٥ متراً ولكن المسار المتعرج يبلغ ٣٨ متراً، فإن المسافة المعتمدة كودياً هي ٣٨ متراً. وفي حال عدم وجود مخطط فرش معتمد، يتم ضرب المسافة المستقيمة في معامل تصحيح (١٫٣ إلى ١٫٥) لتعويض مسار الالتفاف.',
-    keyRuleAr: 'قاعدة ذهبية: مسافة الارتحال = المسار الطبيعي الحقيقي حول العوائق حتى عتبة باب المخرج.',
+    questionAr: 'هل تقاس مسافة الارتحال حتى المخرج بخط مستقيم نظري أم بمسار الحركة الفعلي مع وجود القواطع والأثاث؟ وما هو معامل التصحيح (١٫٣–١٫٥)؟',
+    questionEn: 'Is travel distance measured as a straight line, or along the actual path of natural walking travel around partitions? What is the 1.3-1.5 factor?',
+    officialRulingAr: 'يؤكد الكود المصري ٣٠٥ - الجزء الأول (الباب الرابع بند ٤-٢): تقاس مسافة الارتحال على طول المسار الطبيعي الحقيقي الذي يسلكه الشخص سيراً على الأقدام، على بُعد ٣٠ سم من الحوائط والزوايا وحول الحواجز والمكاتب، حتى الوصول إلى باب المخرج المحمي أو السلم، ولا يجوز احتسابها بخط مستقيم يخترق الجدران أو الأثاث الثابت.',
+    officialRulingEn: 'EFC 305 Part 1 Chapter 4 Clause 4-2 mandates that exit travel distance must be measured along the actual natural walking centerline of travel, 30 cm clear of walls and around partitions, furniture, and machinery to the nearest protected exit enclosure. Straight geometric line measurements crossing walls or unverified spaces are legally rejected.',
+    engineeringImpactAr: 'إذا كانت المسافة المستقيمة بين أبعد نقطة والباب ٢٥ متراً ولكن المسار المتعرج يبلغ ٣٨ متراً، فإن المسافة المعتمدة كودياً هي ٣٨ متراً. وفي مرحلة الرسومات المعمارية التمهيدية (Schematic Design) قبل اعتماد الفرش الداخلي، يُعتمد هندسياً ضرب المسافة المستقيمة في معامل تقديري استشاري (١٫٣ إلى ١٫٥) لتقدير مسار الالتفاف الفعلي طبقاً لاشتراط الكود بالقياس على المسار الطبيعي الحقيقي للمشي.',
+    keyRuleAr: 'قاعدة ذهبية: مسافة الارتحال = المسار الطبيعي الحقيقي حول العوائق حتى عتبة باب المخرج (معامل ١٫٣-١٫٥ تقديري قبل اعتماد الفرش).',
     category: 'egress'
   },
   {
@@ -14585,7 +16857,9 @@ export const CODE_INTERPRETATIONS = [
     topicAr: 'هل يجوز فتح أبواب الغرف نحو الداخل إذا قل العدد عن ٥٠ شخصاً؟',
     topicEn: 'Are exit doors permitted to swing inward if occupant load is under 50?',
     questionAr: 'متى يكون فتح الباب نحو الداخل مسموحاً كودياً ومتى يُعد مخالفة جسيمة ترفضها الحماية المدنية؟',
-    officialRulingAr: 'يسمح الكود المصري ٣٠٥ بفتح باب الحيز نحو الداخل فقط إذا كان الحيز مخصصاً لإشغال قليل الكثافة (أقل من ٥٠ شخصاً) ولا يحتوي على خطورة عالية (كالوقود أو المواد الكيماوية). أما إذا تجاوز عدد الشاغلين ٥٠ شخصاً (كقاعات المحاضرات، صالات التجمع، المتاجر الكبرى)، أو كان الباب مخرجاً يؤدي إلى سلم هروب أو الشارع، فيجب حتماً أن يفتح للخارج مع اتجاه الهروب.',
+    questionEn: 'When is inward door swing permitted by code, and when is it a violation rejected by Civil Protection?',
+    officialRulingAr: 'يسمح الكود المصري ٣٠٥ (الباب الرابع بند ٤-٣-٢) بفتح باب الحيز نحو الداخل فقط إذا كان الحيز مخصصاً لإشغال قليل الكثافة (أقل من ٥٠ شخصاً) ولا يحتوي على خطورة عالية (كالوقود أو المواد الكيماوية). أما إذا تجاوز عدد الشاغلين ٥٠ شخصاً (كقاعات المحاضرات، صالات التجمع، المتاجر الكبرى)، أو كان الباب مخرجاً يؤدي إلى سلم هروب أو الشارع، فيجب حتماً أن يفتح للخارج مع اتجاه الهروب.',
+    officialRulingEn: 'EFC 305 Part 1 Chapter 4 Clause 4-3-2 allows inward-swinging doors only for low-density spaces occupied by fewer than 50 persons without hazardous contents. If occupant load exceeds 50 persons, or if the door serves an exit enclosure or final discharge to the outside, it must swing in the direction of exit travel.',
     engineeringImpactAr: 'في المكاتب الصغيرة أو الغرف الفندقية أو العيادات التي يسكنها أقل من ٥٠ فرداً، يجوز هندسياً فتح الباب للداخل لتفادي غلق الممر، بشرط ألا يعيق دوران الباب حركة الخروج.',
     keyRuleAr: 'قاعدة ذهبية: ≤ ٥٠ شخصاً خطورة عادية = مسموح للداخل | > ٥٠ شخصاً أو خطورة عالية أو أبواب السلالم = إلزامي للخارج مع الهروب.',
     category: 'doors'
@@ -14595,7 +16869,9 @@ export const CODE_INTERPRETATIONS = [
     topicAr: 'شروط دمج خزان مياه الشرب ومياه الإطفاء في خزان أرضي واحد',
     topicEn: 'Conditions for combining domestic and fire protection water storage',
     questionAr: 'هل تسمح الحماية المدنية بخزان مياه مشترك للشرب والري ومكافحة الحريق؟ وكيف نضمن عدم نفاد مياه الحريق؟',
+    questionEn: 'Does Civil Protection permit combined domestic and fire water storage tanks, and how is the fire reserve secured?',
     officialRulingAr: 'الكود المصري ٣٠٥ الجزء الثاني يسمح بإنشاء خزان مائي مشترك بشرط وحيد وجوهري: توفير "احتياطي ميت ميكانيكياً" لا تستطيع طلمبات الشرب أو الخدمة سحبه، وذلك برفع مستوى مواسير سحب مياه الخدمة والشرب فوق مستوى الاحتياطي المخصص للحريق، بينما توضع ماسورة سحب طلمبات الحريق في قاع الخزان مع صمام عدم رجوع ومحبس سحب مانع للدوامات (Vortex Plate).',
+    officialRulingEn: 'EFC 305 Part 2 permits combined domestic and fire water storage provided that a dedicated, mechanically irreversible fire reserve is maintained. Domestic suction pipes must terminate well above the designated fire reserve elevation, while fire pump suction lines draw from the bottom equipped with approved anti-vortex plates.',
     engineeringImpactAr: 'يحمي هذا الإجراء المبنى من أزمة نفاد مياه الحريق عند انقطاع المياه العمومية، وتوافق عليه إدارة الحماية المدنية فوراً بشرط إرفاق قطاع هيدروليكي يوضح مناسيب السحب.',
     keyRuleAr: 'قاعدة ذهبية: سحب الشرب في الثلث العلوي، وسحب الحريق في القاع مع لوح مانع للدوامات لضمان كامل سعة الحريق.',
     category: 'suppression'
@@ -14605,7 +16881,9 @@ export const CODE_INTERPRETATIONS = [
     topicAr: 'المخرج النهائي (Exit Discharge) ومسار الإفراغ في الدور الأرضي',
     topicEn: 'Exit Discharge requirements and travel path at grade level',
     questionAr: 'إذا فرغ سلم الهروب في ردهة الدور الأرضي وليس إلى الشارع مباشرة، فما هي الشروط الواجب توفرها؟',
-    officialRulingAr: 'الكود المصري ٣٠٥ الجزء الأول بند ٣-٦ يسمح بأن يفرغ سلم واحد بحد أقصى (لا يتجاوز ٥٠٪ من طاقة مسالك الهروب) في ردهة الدور الأرضي، بشرط: أن تكون الردهة مزودة بنظام رشاشات مياه تلقائية، وألا تزيد مسافة السير من قاعدة السلم إلى الشارع عن ٩ أمتار، وأن تكون الردهة مفصولة عن باقي الأدوار.',
+    questionEn: 'If an exit stair discharges into a ground floor lobby rather than directly outside, what are the mandatory code conditions?',
+    officialRulingAr: 'الكود المصري ٣٠٥ الجزء الأول - الباب الرابع (تفريغ المخارج بند ٤-٦) يسمح بأن يفرغ سلم واحد بحد أقصى (لا يتجاوز ٥٠٪ من طاقة مسالك الهروب الإجمالية) في بهو أو ردهة الدور الأرضي، بشرط: أن تكون الردهة مجهزة بنظام رشاشات مياه تلقائية، ومفصولة عن باقي المبنى، وأن يؤدي المسار مباشرة إلى الخارج لمسافة لا تتجاوز ٩ إلى ١٥ متراً مع مسار خروج واضح ومحمي دون أي عوائق.',
+    officialRulingEn: 'EFC 305 Part 1 Chapter 4 Clause 4-6 allows a maximum of 50% of the total number of exits (or exit capacity) to discharge into a ground floor lobby, provided that the lobby is fully protected by an automatic sprinkler system, separated from levels below, and provides a continuous unobstructed path directly to the exterior within 9 to 15 meters.',
     engineeringImpactAr: 'إذا كان المبنى يحتوي على سلمين، فيجب أن يفرغ أحدهما على الأقل مباشرة إلى الهواء الطلق في منسوب الرصيف، بينما يجوز للثاني الإفراغ في الردهة الرئيسية المطابقة للاشتراطات.',
     keyRuleAr: 'قاعدة ذهبية: ٥٠٪ على الأقل من السلالم يجب أن تفرغ مباشرة للخارج دون المرور بردهات داخلية.',
     category: 'egress'
@@ -14615,7 +16893,7 @@ export const CODE_INTERPRETATIONS = [
 export const FREQUENTLY_ASKED_QUESTIONS = [
   {
     qAr: 'ما هي حمولة الإشغال المعيارية (Occupant Load Factor) للمكاتب والمتاجر والسكني؟',
-    aAr: 'وفق جدول الكود المصري ٣٠٥: المكاتب الإدارية: ٩٫٣ م² / شخص (صافي) | المتاجر في الدور الأرضي: ٢٫٨ م² / شخص (إجمالي) | المتاجر بالأدوار العليا: ٥٫٦ م² / شخص | المباني السكنية: ١٨٫٥ م² / شخص.',
+    aAr: 'وفق جدول الكود المصري ٣٠٥ (الجزء الرابع جدول ٤-١): المكاتب الإدارية: ١٠ م² / شخص (إجمالي) أو ٩٫٣ م² (صافي) | المتاجر في الدور الأرضي: ٣٫٠ م² / شخص (أو ٢٫٨ م² للمتاجر المزدحمة) | المتاجر بالأدوار العليا: ٦٫٠ م² / شخص | المباني السكنية: ٢٠ م² / شخص (أو شقة سكنية بمتوسط ٥ أفراد).',
     tag: 'حمولة الإشغال'
   },
   {
@@ -14640,5 +16918,5 @@ export const FREQUENTLY_ASKED_QUESTIONS = [
   }
 ];
 
-```
+`
 

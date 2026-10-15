@@ -17,7 +17,9 @@ import {
   X,
   Layers,
   Sparkles,
-  Cloud
+  Cloud,
+  Lock,
+  ShieldCheck
 } from 'lucide-react';
 import { OFFICIAL_METADATA } from '../data/codeKnowledgeBase';
 import OfflineModeModal from './OfflineModeModal';
@@ -32,7 +34,10 @@ export default function Navbar({
   sampleProjects, 
   onSelectProject,
   onOpenSplash,
-  onOpenFirebase
+  onOpenFirebase,
+  isAdmin = false,
+  onOpenAdminLogin,
+  onLogoutAdmin
 }) {
   const isAr = lang === 'ar';
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
@@ -81,7 +86,15 @@ export default function Navbar({
     { id: 'admin', labelAr: 'المصادر والتحكم', labelEn: 'Admin & Code Sources', descAr: 'بيانات الاعتماد وإحصائيات الكود', icon: Settings, color: '#64748b' }
   ];
 
-  const isCurrentInSecondary = secondaryMobileTools.some(tool => tool.id === currentTab);
+  const visibleNavItems = isAdmin 
+    ? navItems 
+    : navItems.filter(item => item.id !== 'admin');
+
+  const visibleSecondaryTools = isAdmin 
+    ? secondaryMobileTools 
+    : secondaryMobileTools.filter(tool => tool.id !== 'admin');
+
+  const isCurrentInSecondary = visibleSecondaryTools.some(tool => tool.id === currentTab);
 
   const handleSelectTab = (tabId) => {
     setCurrentTab(tabId);
@@ -133,28 +146,92 @@ export default function Navbar({
             <span>{isAr ? 'مثلث الحريق | م. أحمد فوزي' : 'Fire Triangle | Eng. Ahmed Fawzy'}</span>
           </button>
 
-          <button 
-            type="button"
-            onClick={onOpenFirebase}
-            style={{
-              background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(59, 130, 246, 0.2))',
-              border: '1px solid rgba(245, 158, 11, 0.4)',
-              color: '#93c5fd',
-              borderRadius: '999px',
-              padding: '3px 12px',
-              fontSize: '0.78rem',
-              fontWeight: 800,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
-            title={isAr ? 'إدارة ومزامنة قاعدة بيانات Firebase (fire-code-9603d)' : 'Manage Firebase Database (fire-code-9603d)'}
-          >
-            <span>☁️</span>
-            <span>{isAr ? 'فايربيز | fire-code-9603d' : 'Firebase DB'}</span>
-          </button>
+          {/* Conditional Admin Controls: Firebase DB vs Public Admin Login */}
+          {isAdmin ? (
+            <>
+              <button 
+                type="button"
+                onClick={onOpenFirebase}
+                style={{
+                  background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(59, 130, 246, 0.2))',
+                  border: '1px solid rgba(245, 158, 11, 0.4)',
+                  color: '#93c5fd',
+                  borderRadius: '999px',
+                  padding: '3px 12px',
+                  fontSize: '0.78rem',
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                title={isAr ? 'إدارة ومزامنة قاعدة بيانات Firebase (fire-code-9603d)' : 'Manage Firebase Database (fire-code-9603d)'}
+              >
+                <span>☁️</span>
+                <span>{isAr ? 'فايربيز | fire-code-9603d' : 'Firebase DB'}</span>
+              </button>
+
+              <div 
+                style={{
+                  background: 'rgba(239, 68, 68, 0.18)',
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                  color: '#fca5a5',
+                  borderRadius: '999px',
+                  padding: '3px 10px',
+                  fontSize: '0.75rem',
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <ShieldCheck size={13} color="#ef4444" />
+                <span>{isAr ? 'وضع المسؤول' : 'Admin'}</span>
+                {onLogoutAdmin && (
+                  <button
+                    type="button"
+                    onClick={onLogoutAdmin}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#ffffff',
+                      cursor: 'pointer',
+                      fontSize: '0.72rem',
+                      textDecoration: 'underline',
+                      padding: 0
+                    }}
+                    title={isAr ? 'العودة لواجهة المستخدم العادي' : 'Exit to Public Visitor View'}
+                  >
+                    ({isAr ? 'خروج' : 'Exit'})
+                  </button>
+                )}
+              </div>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={onOpenAdminLogin}
+              style={{
+                background: 'rgba(255, 255, 255, 0.06)',
+                border: '1px solid rgba(255, 255, 255, 0.18)',
+                color: '#cbd5e1',
+                borderRadius: '999px',
+                padding: '3px 11px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              title={isAr ? 'تسجيل دخول المهندس المسؤول والمالك (م. أحمد فوزي)' : 'Engineer & Admin Login'}
+            >
+              <Lock size={12} color="#fca5a5" />
+              <span>{isAr ? 'دخول المسؤول' : 'Admin Login'}</span>
+            </button>
+          )}
 
           <button 
             type="button"
@@ -211,7 +288,7 @@ export default function Navbar({
 
           {/* Navigation Tabs (Desktop / Tablet) */}
           <nav className="nav-tabs" role="tablist">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = currentTab === item.id;
               return (
@@ -315,7 +392,7 @@ export default function Navbar({
 
             {/* Grid of Secondary Navigation Tools */}
             <div className="mobile-more-grid">
-              {secondaryMobileTools.map((tool) => {
+              {visibleSecondaryTools.map((tool) => {
                 const Icon = tool.icon;
                 const isActive = currentTab === tool.id;
                 return (
@@ -380,27 +457,51 @@ export default function Navbar({
                 <span>{isAr ? 'وضع الأوفلاين بالموقع' : 'Offline Mode'}</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => { setIsMoreSheetOpen(false); onOpenFirebase(); }}
-                style={{
-                  background: 'rgba(59, 130, 246, 0.12)',
-                  border: '1px solid rgba(59, 130, 246, 0.3)',
-                  color: '#93c5fd',
-                  borderRadius: '8px',
-                  padding: '10px 8px',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  justifyContent: 'center',
-                  cursor: 'pointer'
-                }}
-              >
-                <Cloud size={14} />
-                <span>{isAr ? 'فايربيز السحابية' : 'Firebase Sync'}</span>
-              </button>
+              {isAdmin ? (
+                <button
+                  type="button"
+                  onClick={() => { setIsMoreSheetOpen(false); onOpenFirebase(); }}
+                  style={{
+                    background: 'rgba(59, 130, 246, 0.12)',
+                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                    color: '#93c5fd',
+                    borderRadius: '8px',
+                    padding: '10px 8px',
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    justifyContent: 'center',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Cloud size={14} />
+                  <span>{isAr ? 'فايربيز السحابية' : 'Firebase Sync'}</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => { setIsMoreSheetOpen(false); onOpenAdminLogin && onOpenAdminLogin(); }}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#cbd5e1',
+                    borderRadius: '8px',
+                    padding: '10px 8px',
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    justifyContent: 'center',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Lock size={14} />
+                  <span>{isAr ? 'دخول المسؤول' : 'Admin Login'}</span>
+                </button>
+              )}
 
               <button
                 type="button"

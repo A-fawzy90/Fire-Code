@@ -12,6 +12,7 @@ import SplashScreen from './components/SplashScreen';
 import EngineeringCalculators from './components/EngineeringCalculators';
 import FirebaseSyncModal from './components/FirebaseSyncModal';
 import RejectionsAndInterpretations from './components/RejectionsAndInterpretations';
+import AdminLoginModal from './components/AdminLoginModal';
 import { deleteProjectFromFirestore } from './services/firebaseConfig';
 
 // Resilient Error Boundary to ensure tabs never freeze
@@ -100,6 +101,43 @@ export default function App() {
     }
   });
   const [isFirebaseModalOpen, setIsFirebaseModalOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(() => {
+    try {
+      if (typeof window !== 'undefined' && window.location) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const adminParam = urlParams.get('admin');
+        if (adminParam && ['2026', 'true', 'fawzy', 'fawzy2026', 'ahmed2026', 'admin'].includes(adminParam.toLowerCase())) {
+          localStorage.setItem('agy_egyptian_fire_admin', 'true');
+          return true;
+        }
+      }
+      return localStorage.getItem('agy_egyptian_fire_admin') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
+
+  const handleAdminLoginSuccess = () => {
+    setIsAdmin(true);
+    try {
+      localStorage.setItem('agy_egyptian_fire_admin', 'true');
+    } catch (e) {
+      console.warn('LocalStorage error:', e);
+    }
+  };
+
+  const handleAdminLogout = () => {
+    setIsAdmin(false);
+    try {
+      localStorage.removeItem('agy_egyptian_fire_admin');
+    } catch (e) {
+      console.warn('LocalStorage error:', e);
+    }
+    if (currentTab === 'admin') {
+      setCurrentTab('dashboard');
+    }
+  };
 
   const handleOpenAssistantWithQuery = (queryText) => {
     setAssistantInitialQuery(queryText);
@@ -340,6 +378,9 @@ export default function App() {
         onSelectProject={handleSelectProject}
         onOpenSplash={() => setIsSplashOpen(true)}
         onOpenFirebase={() => setIsFirebaseModalOpen(true)}
+        isAdmin={isAdmin}
+        onOpenAdminLogin={() => setIsAdminLoginOpen(true)}
+        onLogoutAdmin={handleAdminLogout}
       />
 
       {/* Main Content View Switcher wrapped in TabErrorBoundary */}
@@ -357,6 +398,7 @@ export default function App() {
               onRestoreDefaultProjects={handleRestoreDefaultProjects}
               onAddNewProject={handleAddNewProject}
               onOpenFirebase={() => setIsFirebaseModalOpen(true)}
+              isAdmin={isAdmin}
             />
           )}
 
@@ -418,9 +460,77 @@ export default function App() {
           )}
 
           {currentTab === 'admin' && (
-            <AdminView 
-              lang={lang}
-            />
+            isAdmin ? (
+              <AdminView 
+                lang={lang}
+              />
+            ) : (
+              <div style={{
+                maxWidth: '620px',
+                margin: '50px auto',
+                background: '#ffffff',
+                borderRadius: '16px',
+                padding: '40px 24px',
+                border: '1px solid #e2e8f0',
+                boxShadow: '0 10px 25px rgba(0, 0, 0, 0.05)',
+                textAlign: 'center'
+              }}>
+                <div style={{
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: '50%',
+                  background: '#fef3c7',
+                  color: '#d97706',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 16px auto',
+                  fontSize: '2rem'
+                }}>
+                  🔒
+                </div>
+                <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
+                  {lang === 'ar' ? 'لوحة تحكم المشرف مقفلة' : 'Admin Panel Locked'}
+                </h3>
+                <p style={{ fontSize: '0.88rem', color: '#64748b', lineHeight: 1.6, marginBottom: '24px' }}>
+                  {lang === 'ar' 
+                    ? 'هذا القسم مخصص لإدارة الكود ومصادر البيانات الرسمية للمهندس أحمد فوزي. يمكنك تسجيل الدخول بكلمة المرور أو متابعة استخدام أدوات الكود الهندسية المتاحة للزوار.'
+                    : 'This section is reserved for code administration and source metadata by Eng. Ahmed Fawzy. Please log in or continue using public engineering tools.'}
+                </p>
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsAdminLoginOpen(true)}
+                    style={{
+                      background: '#0f172a',
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '10px 22px',
+                      borderRadius: '8px',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {lang === 'ar' ? '🔐 تسجيل دخول المسؤول' : '🔐 Admin Login'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentTab('dashboard')}
+                    style={{
+                      background: '#f1f5f9',
+                      color: '#334155',
+                      border: '1px solid #cbd5e1',
+                      padding: '10px 20px',
+                      borderRadius: '8px',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {lang === 'ar' ? 'العودة للرئيسية' : 'Back to Dashboard'}
+                  </button>
+                </div>
+              </div>
+            )
           )}
         </TabErrorBoundary>
       </main>
@@ -571,9 +681,9 @@ export default function App() {
         lang={lang} 
       />
 
-      {/* Firebase Cloud Database Sync & Management Modal */}
+      {/* Firebase Cloud Database Sync & Management Modal (Admin Only) */}
       <TabErrorBoundary lang={lang}>
-        {isFirebaseModalOpen && (
+        {isAdmin && isFirebaseModalOpen && (
           <FirebaseSyncModal 
             isOpen={isFirebaseModalOpen}
             onClose={() => setIsFirebaseModalOpen(false)}
@@ -583,6 +693,14 @@ export default function App() {
           />
         )}
       </TabErrorBoundary>
+
+      {/* Discreet Admin Login Modal for Eng. Ahmed Fawzy */}
+      <AdminLoginModal 
+        isOpen={isAdminLoginOpen}
+        onClose={() => setIsAdminLoginOpen(false)}
+        onLoginSuccess={handleAdminLoginSuccess}
+        lang={lang}
+      />
     </div>
   );
 }

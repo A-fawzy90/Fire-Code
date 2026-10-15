@@ -34,7 +34,8 @@ export default function Dashboard({
   onDeleteProject,
   onRestoreDefaultProjects,
   onAddNewProject,
-  onOpenFirebase
+  onOpenFirebase,
+  isAdmin = false
 }) {
   const isAr = lang === 'ar';
   const Arrow = isAr ? ArrowLeft : ArrowRight;
@@ -475,7 +476,7 @@ export default function Dashboard({
               </span>
             </h3>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {projects.length < 3 && onRestoreDefaultProjects && (
+              {isAdmin && projects.length < 3 && onRestoreDefaultProjects && (
                 <button 
                   className="btn-secondary" 
                   style={{ fontSize: '0.78rem', padding: '5px 10px', display: 'flex', alignItems: 'center', gap: '4px' }}
@@ -486,7 +487,7 @@ export default function Dashboard({
                   <span>{isAr ? 'استعادة النماذج' : 'Restore Samples'}</span>
                 </button>
               )}
-              {onOpenFirebase && (
+              {isAdmin && onOpenFirebase && (
                 <button 
                   className="btn-secondary" 
                   style={{ 

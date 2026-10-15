@@ -2210,7 +2210,7 @@ export default function Dashboard({
                 return (
                   <div 
                     key={proj.id}
-                    onClick={() => onSelectProject(proj)}
+                    onClick={() => onSelectProject(proj.id)}
                     style={{
                       padding: '14px 16px',
                       borderRadius: 'var(--radius-md)',

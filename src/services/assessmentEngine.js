@@ -48,6 +48,11 @@ export function parseProjectDescription(text) {
     facts.occupancySubgroup = 'ج-١';
     facts.subgroupNameAr = 'إشغالات سكنية دائمة (المجموعة ج-١: عمارات شقق سكنية)';
     facts.detectedEntities.push({ label: 'إشغال سكني (Residential Group C-1)', text: 'سكني' });
+  } else if (lower.includes('صناع') || lower.includes('مصنع') || lower.includes('مستودع') || lower.includes('مخزن') || lower.includes('ورش') || lower.includes('industrial') || lower.includes('warehouse') || lower.includes('factory')) {
+    facts.occupancyType = 'industrial';
+    facts.occupancySubgroup = 'ص-٢';
+    facts.subgroupNameAr = 'إشغالات صناعية وتخزينية متوسطة الخطورة (المجموعة و / ص-٢)';
+    facts.detectedEntities.push({ label: 'إشغال صناعي ومخازن (Industrial & Storage)', text: 'صناعي / مستودع' });
   } else if (lower.includes('مستشف') || lower.includes('hospital') || lower.includes('مركز طبي') || lower.includes('عيادات مبيت') || lower.includes('صحي')) {
     facts.occupancyType = 'institutional';
     facts.subgroupNameAr = 'رعاية طبية ومؤسسية (المجموعة ب)';
@@ -193,6 +198,9 @@ export function parseProjectDescription(text) {
       facts.occupancySubgroup = 'هـ-٣';
       facts.subgroupNameAr = 'إشغالات تجارية صغيرة (المجموعة هـ-٣: أقل من ١٠٠٠ م² بطابق واحد)';
     }
+  } else if (facts.occupancyType === 'industrial') {
+    facts.occupancySubgroup = 'ص-٢';
+    facts.subgroupNameAr = 'إشغالات صناعية وتخزينية متوسطة الخطورة (المجموعة و / ص-٢)';
   }
 
   return facts;
@@ -215,6 +223,7 @@ export function assessProjectAgainstCode(facts) {
   const isMixed = facts.occupancyType === 'mixed_comm_bus' || facts.occupancyType === 'mixed';
   const isCommercial = facts.occupancyType === 'commercial' || isMixed;
   const isBusiness = facts.occupancyType === 'business' || isMixed;
+  const isIndustrial = facts.occupancyType === 'industrial';
 
   // In Egypt: Residential floor-to-floor is standard 3.0m (قانون البناء ١١٩/٢٠٠٨); Commercial is 3.3m
   const floorRate = isResidential ? 3.0 : 3.3;
@@ -273,10 +282,12 @@ export function assessProjectAgainstCode(facts) {
   // =========================================================================
 
   // M-1. Automatic Sprinklers & Hazard Classification (شبكة الرشاشات التلقائية ودرجة الخطورة)
-  const hazardTypeAr = isCommercial 
-    ? 'خطورة عادية - المجموعة الثانية (Ordinary Hazard Group 2)' 
-    : ((isBusiness || isResidential) ? 'خطورة خفيفة (Light Hazard)' : 'خطورة عادية (Ordinary Hazard)');
-  const densityGpm = isCommercial ? '٠٫٢٠ GPM/قدم² (٨٫٢ مم/دقيقة)' : '٠٫١٠ GPM/قدم² (٤٫١ مم/دقيقة)';
+  const hazardTypeAr = isIndustrial
+    ? 'خطورة عادية إلى عالية - منشآت صناعية وتخزينية (Ordinary / Extra Hazard)'
+    : isCommercial 
+      ? 'خطورة عادية - المجموعة الثانية (Ordinary Hazard Group 2)' 
+      : ((isBusiness || isResidential) ? 'خطورة خفيفة (Light Hazard)' : 'خطورة عادية (Ordinary Hazard)');
+  const densityGpm = (isCommercial || isIndustrial) ? '٠٫٢٠ GPM/قدم² (٨٫٢ مم/دقيقة)' : '٠٫١٠ GPM/قدم² (٤٫١ مم/دقيقة)';
   
   let sprinklerReqAr = `تصنيف درجة الخطورة الإشغالية: ${hazardTypeAr} بكثافة تصميمية ${densityGpm} على مساحة تصميمية ١٥٠٠ قدم² (١٣٩ م²). `;
   if (hasBasement) {

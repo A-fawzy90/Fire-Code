@@ -143,7 +143,8 @@ export default function FirebaseSyncModal({
             ...existing,
             ...cp,
             id: key,
-            name: typeof cp.name === 'string' && cp.name.trim() ? cp.name : (existing.name || 'مشروع سحابي بدون عنوان'),
+            titleAr: cp.titleAr || cp.name || existing.titleAr || 'مشروع سحابي بدون عنوان',
+            titleEn: cp.titleEn || cp.name || existing.titleEn || 'Untitled Cloud Project',
             occupancyType: cp.occupancyType || existing.occupancyType || 'commercial',
             status: cp.status || existing.status || 'pending_review',
             facts: (typeof cp.facts === 'object' && cp.facts !== null) ? { ...(existing.facts || {}), ...cp.facts } : (existing.facts || {})

@@ -1,7 +1,7 @@
 # كود مشروع مساعد كود الحريق المصري بالكامل في ملف واحد
 
 > تصميم وتطوير: المهندس / أحمد فوزي - مهندس أنظمة مكافحة وإنذار الحريق
-> يتضمن الكود المصدري الكامل لجميع الملفات والمكونات والخدمات الهندسية ومكتبة أخطاء الرفض ونظام العمل الميداني بدون إنترنت (Offline PWA) ونظام الصلاحيات المزدوج مع دعم الوضعين الداكن والفاتح (Dark / Light Mode).
+> يتضمن الكود المصدري الكامل لجميع الملفات والمكونات والخدمات الهندسية ومكتبة أخطاء الرفض ونظام العمل الميداني بدون إنترنت (Offline PWA) ونظام الصلاحيات المزدوج مع دعم الوضعين الداكن والفاتح وإصلاحات الربط الهندسي الدقيقة.
 
 ================================================================================
 📁 ملف: package.json
@@ -578,6 +578,27 @@ textarea,
 [data-theme='dark'] .mobile-bottom-nav {
   background: #0a0e1a;
   border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='dark'] .main-content h1,
+[data-theme='dark'] .main-content h2,
+[data-theme='dark'] .main-content h3,
+[data-theme='dark'] .main-content h4 {
+  color: var(--text-primary) !important;
+}
+
+[data-theme='dark'] .report-sheet {
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+
+[data-theme='dark'] .report-sheet h1,
+[data-theme='dark'] .report-sheet h2,
+[data-theme='dark'] .report-sheet h3,
+[data-theme='dark'] .report-sheet strong,
+[data-theme='dark'] .report-sheet td,
+[data-theme='dark'] .report-sheet th {
+  color: #0f172a !important;
 }
 
 *, *::before, *::after {
@@ -2001,6 +2022,16 @@ export default function App() {
     setCurrentTab('assessment');
   };
 
+  const handleSwitchTabWithContext = (tabId, context) => {
+    if (context && context.itemTitle) {
+      const q = lang === 'ar'
+        ? `فحص مدى مطابقة المشروع للاشتراط الكودي: ${context.itemTitle} (${context.category || ''})`
+        : `Check compliance with Fire Code requirement: ${context.itemTitle}`;
+      setInitialAssessmentQuery(q);
+    }
+    setCurrentTab(tabId);
+  };
+
   return (
     <div className="app-container">
       {/* Top Navigation & Authority Banner */}
@@ -2063,7 +2094,7 @@ export default function App() {
               lang={lang}
               selectedProject={selectedProject}
               onOpenAssistant={handleOpenAssistantWithQuery}
-              onSwitchTab={setCurrentTab}
+              onSwitchTab={handleSwitchTabWithContext}
             />
           )}
 
@@ -4055,8 +4086,8 @@ export default function ProjectAssessment({
   const [formData, setFormData] = useState({
     occupancyType: selectedProject?.facts?.occupancyType || 'commercial',
     subgroupCode: selectedProject?.facts?.subgroupCode || 'هـ-١',
-    aboveGroundFloors: selectedProject?.facts?.aboveGroundFloors || 6,
-    basementFloors: selectedProject?.facts?.basementFloors || 1,
+    aboveGroundFloors: selectedProject?.facts?.aboveGroundFloors ?? 6,
+    basementFloors: selectedProject?.facts?.basementFloors ?? 1,
     basementUse: selectedProject?.facts?.basementUse || 'parking',
     floorArea: selectedProject?.facts?.floorArea || 1200,
     buildingHeight: selectedProject?.facts?.buildingHeight || 24,
@@ -4142,17 +4173,18 @@ export default function ProjectAssessment({
     }
   }, [initialQuery]);
 
-  // Synchronize form and re-run assessment when selectedProject changes
+  // Synchronize form and re-run assessment when selectedProject or its facts change
   useEffect(() => {
     if (selectedProject) {
-      const desc = selectedProject.descriptionAr || selectedProject.name || '';
+      const desc = selectedProject.descriptionAr || selectedProject.titleAr || selectedProject.name || '';
       setDescriptionInput(desc);
+      const bFloors = selectedProject.facts?.basementFloors ?? 0;
       const newForm = {
         occupancyType: selectedProject.facts?.occupancyType || 'commercial',
         subgroupCode: selectedProject.facts?.subgroupCode || selectedProject.facts?.occupancySubgroup || 'هـ-١',
-        aboveGroundFloors: selectedProject.facts?.aboveGroundFloors || 6,
-        basementFloors: selectedProject.facts?.basementFloors !== undefined ? selectedProject.facts.basementFloors : 1,
-        basementUse: selectedProject.facts?.basementUse || 'parking',
+        aboveGroundFloors: selectedProject.facts?.aboveGroundFloors ?? 6,
+        basementFloors: bFloors,
+        basementUse: bFloors === 0 ? 'none' : (selectedProject.facts?.basementUse || 'parking'),
         floorArea: Number(selectedProject.facts?.floorArea) || 1200,
         buildingHeight: Number(selectedProject.facts?.buildingHeight) || 24,
         occupantLoad: selectedProject.facts?.occupantLoadEstimated || 1400,
@@ -4160,17 +4192,16 @@ export default function ProjectAssessment({
         location: selectedProject.facts?.location || (isAr ? 'القاهرة الجديدة' : 'New Cairo')
       };
       setFormData(newForm);
-      if (desc) {
-        runAssessment(desc);
-      } else {
-        const res = assessProjectAgainstCode({
-          ...selectedProject.facts,
-          ...newForm
-        });
-        setAssessmentResult(res);
-      }
+
+      // Run assessment engine directly on facts to preserve CAD / extracted drawing data
+      const res = assessProjectAgainstCode({
+        ...selectedProject.facts,
+        ...newForm,
+        occupancySubgroup: newForm.subgroupCode
+      });
+      setAssessmentResult(res);
     }
-  }, [selectedProject?.id]);
+  }, [selectedProject, isAr]);
 
   const handleDescriptionSubmit = (e) => {
     e.preventDefault();
@@ -4322,6 +4353,7 @@ export default function ProjectAssessment({
                   <option value="business">{isAr ? 'إداري ومهني (د)' : 'Business / Admin (Group D)'}</option>
                   <option value="mixed_comm_bus">{isAr ? 'متعدد الإشغال: تجاري وإداري (هـ / د)' : 'Mixed: Commercial & Business (Groups E & D)'}</option>
                   <option value="residential">{isAr ? 'سكني (ج)' : 'Residential (Group C)'}</option>
+                  <option value="industrial">{isAr ? 'صناعي ومستودعات (و / ص)' : 'Industrial & Storage'}</option>
                   <option value="institutional">{isAr ? 'مؤسسي وصحي (ب)' : 'Institutional / Hospital (Group B)'}</option>
                   <option value="assembly">{isAr ? 'تجمعات أفراد (أ)' : 'Assembly (Group A)'}</option>
                 </select>
@@ -13109,7 +13141,8 @@ export default function FirebaseSyncModal({
             ...existing,
             ...cp,
             id: key,
-            name: typeof cp.name === 'string' && cp.name.trim() ? cp.name : (existing.name || 'مشروع سحابي بدون عنوان'),
+            titleAr: cp.titleAr || cp.name || existing.titleAr || 'مشروع سحابي بدون عنوان',
+            titleEn: cp.titleEn || cp.name || existing.titleEn || 'Untitled Cloud Project',
             occupancyType: cp.occupancyType || existing.occupancyType || 'commercial',
             status: cp.status || existing.status || 'pending_review',
             facts: (typeof cp.facts === 'object' && cp.facts !== null) ? { ...(existing.facts || {}), ...cp.facts } : (existing.facts || {})
@@ -14150,6 +14183,11 @@ export function parseProjectDescription(text) {
     facts.occupancySubgroup = 'ج-١';
     facts.subgroupNameAr = 'إشغالات سكنية دائمة (المجموعة ج-١: عمارات شقق سكنية)';
     facts.detectedEntities.push({ label: 'إشغال سكني (Residential Group C-1)', text: 'سكني' });
+  } else if (lower.includes('صناع') || lower.includes('مصنع') || lower.includes('مستودع') || lower.includes('مخزن') || lower.includes('ورش') || lower.includes('industrial') || lower.includes('warehouse') || lower.includes('factory')) {
+    facts.occupancyType = 'industrial';
+    facts.occupancySubgroup = 'ص-٢';
+    facts.subgroupNameAr = 'إشغالات صناعية وتخزينية متوسطة الخطورة (المجموعة و / ص-٢)';
+    facts.detectedEntities.push({ label: 'إشغال صناعي ومخازن (Industrial & Storage)', text: 'صناعي / مستودع' });
   } else if (lower.includes('مستشف') || lower.includes('hospital') || lower.includes('مركز طبي') || lower.includes('عيادات مبيت') || lower.includes('صحي')) {
     facts.occupancyType = 'institutional';
     facts.subgroupNameAr = 'رعاية طبية ومؤسسية (المجموعة ب)';
@@ -14295,6 +14333,9 @@ export function parseProjectDescription(text) {
       facts.occupancySubgroup = 'هـ-٣';
       facts.subgroupNameAr = 'إشغالات تجارية صغيرة (المجموعة هـ-٣: أقل من ١٠٠٠ م² بطابق واحد)';
     }
+  } else if (facts.occupancyType === 'industrial') {
+    facts.occupancySubgroup = 'ص-٢';
+    facts.subgroupNameAr = 'إشغالات صناعية وتخزينية متوسطة الخطورة (المجموعة و / ص-٢)';
   }
 
   return facts;
@@ -14317,6 +14358,7 @@ export function assessProjectAgainstCode(facts) {
   const isMixed = facts.occupancyType === 'mixed_comm_bus' || facts.occupancyType === 'mixed';
   const isCommercial = facts.occupancyType === 'commercial' || isMixed;
   const isBusiness = facts.occupancyType === 'business' || isMixed;
+  const isIndustrial = facts.occupancyType === 'industrial';
 
   // In Egypt: Residential floor-to-floor is standard 3.0m (قانون البناء ١١٩/٢٠٠٨); Commercial is 3.3m
   const floorRate = isResidential ? 3.0 : 3.3;
@@ -14375,10 +14417,12 @@ export function assessProjectAgainstCode(facts) {
   // =========================================================================
 
   // M-1. Automatic Sprinklers & Hazard Classification (شبكة الرشاشات التلقائية ودرجة الخطورة)
-  const hazardTypeAr = isCommercial 
-    ? 'خطورة عادية - المجموعة الثانية (Ordinary Hazard Group 2)' 
-    : ((isBusiness || isResidential) ? 'خطورة خفيفة (Light Hazard)' : 'خطورة عادية (Ordinary Hazard)');
-  const densityGpm = isCommercial ? '٠٫٢٠ GPM/قدم² (٨٫٢ مم/دقيقة)' : '٠٫١٠ GPM/قدم² (٤٫١ مم/دقيقة)';
+  const hazardTypeAr = isIndustrial
+    ? 'خطورة عادية إلى عالية - منشآت صناعية وتخزينية (Ordinary / Extra Hazard)'
+    : isCommercial 
+      ? 'خطورة عادية - المجموعة الثانية (Ordinary Hazard Group 2)' 
+      : ((isBusiness || isResidential) ? 'خطورة خفيفة (Light Hazard)' : 'خطورة عادية (Ordinary Hazard)');
+  const densityGpm = (isCommercial || isIndustrial) ? '٠٫٢٠ GPM/قدم² (٨٫٢ مم/دقيقة)' : '٠٫١٠ GPM/قدم² (٤٫١ مم/دقيقة)';
   
   let sprinklerReqAr = `تصنيف درجة الخطورة الإشغالية: ${hazardTypeAr} بكثافة تصميمية ${densityGpm} على مساحة تصميمية ١٥٠٠ قدم² (١٣٩ م²). `;
   if (hasBasement) {

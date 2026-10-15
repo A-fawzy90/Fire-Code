@@ -394,6 +394,16 @@ export default function App() {
     setCurrentTab('assessment');
   };
 
+  const handleSwitchTabWithContext = (tabId, context) => {
+    if (context && context.itemTitle) {
+      const q = lang === 'ar'
+        ? `فحص مدى مطابقة المشروع للاشتراط الكودي: ${context.itemTitle} (${context.category || ''})`
+        : `Check compliance with Fire Code requirement: ${context.itemTitle}`;
+      setInitialAssessmentQuery(q);
+    }
+    setCurrentTab(tabId);
+  };
+
   return (
     <div className="app-container">
       {/* Top Navigation & Authority Banner */}
@@ -456,7 +466,7 @@ export default function App() {
               lang={lang}
               selectedProject={selectedProject}
               onOpenAssistant={handleOpenAssistantWithQuery}
-              onSwitchTab={setCurrentTab}
+              onSwitchTab={handleSwitchTabWithContext}
             />
           )}
 

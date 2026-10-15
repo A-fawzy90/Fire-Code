@@ -243,6 +243,27 @@ textarea,
   border-top-color: rgba(255, 255, 255, 0.1);
 }
 
+[data-theme='dark'] .main-content h1,
+[data-theme='dark'] .main-content h2,
+[data-theme='dark'] .main-content h3,
+[data-theme='dark'] .main-content h4 {
+  color: var(--text-primary) !important;
+}
+
+[data-theme='dark'] .report-sheet {
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+
+[data-theme='dark'] .report-sheet h1,
+[data-theme='dark'] .report-sheet h2,
+[data-theme='dark'] .report-sheet h3,
+[data-theme='dark'] .report-sheet strong,
+[data-theme='dark'] .report-sheet td,
+[data-theme='dark'] .report-sheet th {
+  color: #0f172a !important;
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;

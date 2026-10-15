@@ -141,10 +141,39 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Handle Firebase and Google Analytics as network-only (with offline silence)
-  if (url.hostname.includes('firebase') || url.hostname.includes('googleapis.com') && !url.pathname.includes('/css')) {
+  // Handle Google Fonts & static font binaries (.woff2) with Cache First strategy
+  const isGoogleFont = 
+    url.hostname === 'fonts.googleapis.com' || 
+    url.hostname === 'fonts.gstatic.com';
+
+  if (isGoogleFont) {
     event.respondWith(
-      fetch(req).catch(() => new Response(JSON.stringify({ offline: true }), { headers: { 'Content-Type': 'application/json' } }))
+      caches.match(req).then((cachedFont) => {
+        if (cachedFont) return cachedFont;
+        return fetch(req).then((networkRes) => {
+          if (networkRes && networkRes.status === 200) {
+            const clone = networkRes.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+          }
+          return networkRes;
+        }).catch(() => new Response('', { status: 408, statusText: 'Font Offline' }));
+      })
+    );
+    return;
+  }
+
+  // Handle Firebase and Google Analytics as network-only
+  const isCloudOrAnalytics = 
+    url.hostname.includes('firebase') || 
+    (url.hostname.includes('googleapis.com') && !url.hostname.includes('fonts.googleapis.com'));
+
+  if (isCloudOrAnalytics) {
+    event.respondWith(
+      fetch(req).catch(() => 
+        new Response(JSON.stringify({ offline: true, timestamp: Date.now() }), { 
+          headers: { 'Content-Type': 'application/json' } 
+        })
+      )
     );
     return;
   }
@@ -859,6 +888,41 @@ body {
   }
 }
 
+/* Animations and Keyframes */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin,
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+.spin-slow,
+.animate-spin-slow {
+  animation: spin 2.5s linear infinite;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fadeIn,
+.animate-fade-in {
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
 ```
 
 ================================================================================

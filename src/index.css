@@ -996,7 +996,7 @@ button {
 
 .animate-spin-slow,
 .spin-slow {
-  animation: spin-slow 8s linear infinite;
+  animation: spin 2.5s linear infinite;
 }
 
 .animate-fade-in,

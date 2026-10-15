@@ -56,7 +56,28 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Handle Firebase and Google Analytics as network-only (do NOT block Google Fonts)
+  // Handle Google Fonts & static font binaries (.woff2) with Cache First strategy
+  const isGoogleFont = 
+    url.hostname === 'fonts.googleapis.com' || 
+    url.hostname === 'fonts.gstatic.com';
+
+  if (isGoogleFont) {
+    event.respondWith(
+      caches.match(req).then((cachedFont) => {
+        if (cachedFont) return cachedFont;
+        return fetch(req).then((networkRes) => {
+          if (networkRes && networkRes.status === 200) {
+            const clone = networkRes.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+          }
+          return networkRes;
+        }).catch(() => new Response('', { status: 408, statusText: 'Font Offline' }));
+      })
+    );
+    return;
+  }
+
+  // Handle Firebase and Google Analytics as network-only
   const isCloudOrAnalytics = 
     url.hostname.includes('firebase') || 
     (url.hostname.includes('googleapis.com') && !url.hostname.includes('fonts.googleapis.com'));

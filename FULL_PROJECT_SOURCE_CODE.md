@@ -2235,11 +2235,11 @@ export default function Dashboard({
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span className={`badge ${
-                          proj.status === 'Requires Review' ? 'badge-amber' : 
-                          proj.status === 'Potential Issue Identified' ? 'badge-red' : 'badge-green'
+                          (proj.status === 'Requires Review' || proj.status === 'review_required') ? 'badge-amber' : 
+                          (proj.status === 'Potential Issue Identified' || proj.status === 'potential_issue' || proj.status === 'critical_issue') ? 'badge-red' : 'badge-green'
                         }`}>
-                          {proj.status === 'Requires Review' ? (isAr ? 'يتطلب مراجعة' : 'Requires Review') :
-                           proj.status === 'Potential Issue Identified' ? (isAr ? 'ملاحظة حرجة' : 'Potential Issue') :
+                          {(proj.status === 'Requires Review' || proj.status === 'review_required') ? (isAr ? 'يتطلب مراجعة' : 'Requires Review') :
+                           (proj.status === 'Potential Issue Identified' || proj.status === 'potential_issue' || proj.status === 'critical_issue') ? (isAr ? 'ملاحظة حرجة' : 'Potential Issue') :
                            (isAr ? 'قيد المطابقة' : 'In Review')}
                         </span>
 

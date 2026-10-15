@@ -598,14 +598,12 @@ export default function Dashboard({
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span className={`badge ${
-                          (proj.status === 'review_required' || proj.status === 'Requires Review') ? 'badge-amber' : 
-                          (proj.status === 'potential_issue' || proj.status === 'Potential Issue Identified' || proj.status === 'critical_issue') ? 'badge-red' : 
-                          (proj.status === 'compliant' || proj.status === 'approved') ? 'badge-green' : 'badge-blue'
+                          (proj.status === 'Requires Review' || proj.status === 'review_required') ? 'badge-amber' : 
+                          (proj.status === 'Potential Issue Identified' || proj.status === 'potential_issue' || proj.status === 'critical_issue') ? 'badge-red' : 'badge-green'
                         }`}>
-                          {(proj.status === 'review_required' || proj.status === 'Requires Review') ? (isAr ? 'يتطلب مراجعة' : 'Requires Review') :
-                           (proj.status === 'potential_issue' || proj.status === 'Potential Issue Identified' || proj.status === 'critical_issue') ? (isAr ? 'ملاحظة حرجة' : 'Critical Issue') :
-                           (proj.status === 'compliant' || proj.status === 'approved') ? (isAr ? 'مطابق للكود' : 'Compliant') :
-                           (isAr ? 'قيد المراجعة' : 'Under Review')}
+                          {(proj.status === 'Requires Review' || proj.status === 'review_required') ? (isAr ? 'يتطلب مراجعة' : 'Requires Review') :
+                           (proj.status === 'Potential Issue Identified' || proj.status === 'potential_issue' || proj.status === 'critical_issue') ? (isAr ? 'ملاحظة حرجة' : 'Potential Issue') :
+                           (isAr ? 'قيد المطابقة' : 'In Review')}
                         </span>
 
                         {/* Delete Project Button */}

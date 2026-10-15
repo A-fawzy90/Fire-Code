@@ -75,7 +75,7 @@
   --safe-right: env(safe-area-inset-right, 0px);
 }
 
-* {
+*, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;

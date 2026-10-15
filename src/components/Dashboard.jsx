@@ -870,15 +870,15 @@ export default function Dashboard({
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 9999,
-          padding: '20px'
+          padding: 'clamp(10px, 3vw, 20px)'
         }}>
           <div style={{
             background: '#ffffff',
             borderRadius: '16px',
-            padding: '28px',
+            padding: 'clamp(16px, 4vw, 28px)',
             maxWidth: '560px',
             width: '100%',
-            maxHeight: '90vh',
+            maxHeight: '92dvh',
             overflowY: 'auto',
             boxShadow: '0 20px 40px rgba(0, 0, 0, 0.25)',
             border: '1px solid #cbd5e1',
@@ -914,7 +914,7 @@ export default function Dashboard({
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="grid-2" style={{ gap: '12px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                     {isAr ? 'نوع الإشغال الرئيسي:' : 'Occupancy Type:'}
@@ -947,7 +947,7 @@ export default function Dashboard({
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="grid-2" style={{ gap: '12px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                     {isAr ? 'الأدوار فوق الأرض:' : 'Above Ground Floors:'}
@@ -977,7 +977,7 @@ export default function Dashboard({
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="grid-2" style={{ gap: '12px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                     {isAr ? 'مساحة الدور (م²):' : 'Floor Area (m²):'}

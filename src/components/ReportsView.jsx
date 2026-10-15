@@ -123,7 +123,7 @@ export default function ReportsView({ lang, selectedProject }) {
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <button 
             className="btn-secondary" 
             onClick={() => window.print()}
@@ -144,18 +144,7 @@ export default function ReportsView({ lang, selectedProject }) {
       </div>
 
       {/* Printable Technical Memorandum Document Sheet */}
-      <div style={{
-        background: '#ffffff',
-        border: '1px solid #cbd5e1',
-        borderRadius: 'var(--radius-lg)',
-        padding: '48px',
-        maxWidth: '960px',
-        margin: '0 auto',
-        width: '100%',
-        boxShadow: 'var(--shadow-lg)',
-        lineHeight: 1.7,
-        color: '#0f172a'
-      }}>
+      <div className="report-sheet">
         
         {/* Official Letterhead */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #0f172a', paddingBottom: '20px', marginBottom: '24px' }}>
@@ -213,36 +202,38 @@ export default function ReportsView({ lang, selectedProject }) {
           <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#1e293b', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px', marginBottom: '12px' }}>
             {isAr ? 'أولاً: بيانات المنشأة والمعطيات الهندسية المعتمدة' : '1. Project Identification & Technical Data'}
           </h2>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
-            <tbody>
-              <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <td style={{ padding: '8px', fontWeight: 700, color: '#475569', width: '30%' }}>{isAr ? 'اسم المشروع:' : 'Project Name:'}</td>
-                <td style={{ padding: '8px', color: '#0f172a' }}>{isAr ? project.titleAr : project.titleEn}</td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <td style={{ padding: '8px', fontWeight: 700, color: '#475569' }}>{isAr ? 'الموقع العام:' : 'Location:'}</td>
-                <td style={{ padding: '8px', color: '#0f172a' }}>{project.facts.location}</td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <td style={{ padding: '8px', fontWeight: 700, color: '#475569' }}>{isAr ? 'التصنيف الكودي للإشغال:' : 'Occupancy Group:'}</td>
-                <td style={{ padding: '8px', color: '#0f172a' }}>
-                  <strong>{project.facts.subgroupNameAr}</strong> ({isAr ? 'جدول ٢-١ الباب الثاني' : 'Table 2-1'})
-                </td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <td style={{ padding: '8px', fontWeight: 700, color: '#475569' }}>{isAr ? 'عدد الطوابق والارتفاع:' : 'Floors & Height:'}</td>
-                <td style={{ padding: '8px', color: '#0f172a' }}>
-                  {project.facts.totalFloors} {isAr ? 'طوابق' : 'floors'} ({project.facts.basementFloors} {isAr ? 'بدروم' : 'basement'} + {project.facts.aboveGroundFloors} {isAr ? 'أرضي ومتكرر' : 'above'}) • {isAr ? `ارتفاع المبنى: ${project.facts.buildingHeight} متراً` : `Height: ${project.facts.buildingHeight}m`}
-                </td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <td style={{ padding: '8px', fontWeight: 700, color: '#475569' }}>{isAr ? 'مساحة الدور والإجمالي:' : 'Floor & Total Area:'}</td>
-                <td style={{ padding: '8px', color: '#0f172a' }}>
-                  {project.facts.floorArea} م² {isAr ? 'للدور' : '/ floor'} • {project.facts.totalArea} م² {isAr ? 'إجمالي المساحة' : 'total'}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div className="table-responsive">
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
+              <tbody>
+                <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td style={{ padding: '8px', fontWeight: 700, color: '#475569', width: '30%' }}>{isAr ? 'اسم المشروع:' : 'Project Name:'}</td>
+                  <td style={{ padding: '8px', color: '#0f172a' }}>{isAr ? project.titleAr : project.titleEn}</td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td style={{ padding: '8px', fontWeight: 700, color: '#475569' }}>{isAr ? 'الموقع العام:' : 'Location:'}</td>
+                  <td style={{ padding: '8px', color: '#0f172a' }}>{project.facts.location}</td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td style={{ padding: '8px', fontWeight: 700, color: '#475569' }}>{isAr ? 'التصنيف الكودي للإشغال:' : 'Occupancy Group:'}</td>
+                  <td style={{ padding: '8px', color: '#0f172a' }}>
+                    <strong>{project.facts.subgroupNameAr}</strong> ({isAr ? 'جدول ٢-١ الباب الثاني' : 'Table 2-1'})
+                  </td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td style={{ padding: '8px', fontWeight: 700, color: '#475569' }}>{isAr ? 'عدد الطوابق والارتفاع:' : 'Floors & Height:'}</td>
+                  <td style={{ padding: '8px', color: '#0f172a' }}>
+                    {project.facts.totalFloors} {isAr ? 'طوابق' : 'floors'} ({project.facts.basementFloors} {isAr ? 'بدروم' : 'basement'} + {project.facts.aboveGroundFloors} {isAr ? 'أرضي ومتكرر' : 'above'}) • {isAr ? `ارتفاع المبنى: ${project.facts.buildingHeight} متراً` : `Height: ${project.facts.buildingHeight}m`}
+                  </td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td style={{ padding: '8px', fontWeight: 700, color: '#475569' }}>{isAr ? 'مساحة الدور والإجمالي:' : 'Floor & Total Area:'}</td>
+                  <td style={{ padding: '8px', color: '#0f172a' }}>
+                    {project.facts.floorArea} م² {isAr ? 'للدور' : '/ floor'} • {project.facts.totalArea} م² {isAr ? 'إجمالي المساحة' : 'total'}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Section 2: Core Code Provisions Applied */}

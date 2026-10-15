@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Upload, 
+  Camera,
   AlertTriangle, 
   ZoomIn, 
   ZoomOut, 
@@ -19,7 +20,9 @@ import { toLatinDigits } from '../services/assessmentEngine';
 export default function DrawingReview({ lang, onApplyExtractedFacts }) {
   const isAr = lang === 'ar';
   const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
   const createdUrlsRef = useRef([]);
+  const [mobileTab, setMobileTab] = useState('canvas'); // 'canvas' | 'facts' | 'files'
 
   // Revoke object URLs on component unmount
   useEffect(() => {
@@ -203,7 +206,7 @@ export default function DrawingReview({ lang, onApplyExtractedFacts }) {
     setLayersVisibility(prev => ({ ...prev, [layerKey]: !prev[layerKey] }));
   };
 
-  // Handle Drag & Pan in Viewport
+  // Handle Drag & Pan in Viewport (Mouse)
   const handleMouseDown = (e) => {
     setIsDragging(true);
     setDragStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
@@ -229,6 +232,74 @@ export default function DrawingReview({ lang, onApplyExtractedFacts }) {
 
   const handleMouseUp = () => {
     setIsDragging(false);
+  };
+
+  // Multi-Touch Gestures for Mobile (Android & iOS): Single-finger Pan & Two-finger Pinch-to-Zoom
+  const touchRef = useRef({
+    isPinching: false,
+    startDist: 0,
+    startZoom: 100,
+    startX: 0,
+    startY: 0,
+    startPanX: 0,
+    startPanY: 0
+  });
+
+  const getTouchDist = (t1, t2) => {
+    const dx = t1.clientX - t2.clientX;
+    const dy = t1.clientY - t2.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  const handleTouchStart = (e) => {
+    if (e.touches.length === 1) {
+      // 1-Finger Pan
+      const t = e.touches[0];
+      touchRef.current.isPinching = false;
+      touchRef.current.startX = t.clientX;
+      touchRef.current.startY = t.clientY;
+      touchRef.current.startPanX = panOffset.x;
+      touchRef.current.startPanY = panOffset.y;
+      setIsDragging(true);
+    } else if (e.touches.length === 2) {
+      // 2-Finger Pinch Zoom
+      touchRef.current.isPinching = true;
+      touchRef.current.startDist = getTouchDist(e.touches[0], e.touches[1]);
+      touchRef.current.startZoom = zoomLevel;
+      setIsDragging(false);
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (e.touches.length === 1 && !touchRef.current.isPinching) {
+      const t = e.touches[0];
+      const dx = t.clientX - touchRef.current.startX;
+      const dy = t.clientY - touchRef.current.startY;
+      setPanOffset({
+        x: touchRef.current.startPanX + dx,
+        y: touchRef.current.startPanY + dy
+      });
+
+      const rect = e.currentTarget.getBoundingClientRect();
+      const relX = ((t.clientX - rect.left) / rect.width) * 40.0;
+      const relY = ((rect.bottom - t.clientY) / rect.height) * 30.0;
+      setCursorPos({
+        x: Math.max(0, Math.min(40, relX)).toFixed(2),
+        y: Math.max(0, Math.min(30, relY)).toFixed(2)
+      });
+    } else if (e.touches.length === 2) {
+      const currentDist = getTouchDist(e.touches[0], e.touches[1]);
+      if (touchRef.current.startDist > 0) {
+        const scaleFactor = currentDist / touchRef.current.startDist;
+        const newZoom = Math.min(250, Math.max(50, Math.round(touchRef.current.startZoom * scaleFactor)));
+        setZoomLevel(newZoom);
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    touchRef.current.isPinching = false;
   };
 
   // Upload Processor for CAD Files (DWG / DXF / PDF / Images)
@@ -423,23 +494,43 @@ export default function DrawingReview({ lang, onApplyExtractedFacts }) {
           </p>
         </div>
 
-        {/* Upload Trigger Button */}
-        <div>
+        {/* Upload Trigger Buttons (CAD / PDF + Mobile Camera Photo) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <button 
             type="button"
             className="btn-primary" 
             onClick={() => fileInputRef.current?.click()}
-            style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', fontWeight: 700 }}
+            style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', fontWeight: 700, minHeight: '44px' }}
           >
             <Upload size={18} />
-            <span>{isAr ? 'رفع مخطط أوتوكاد جديد (DWG / DXF / PDF)' : 'Upload CAD File (DWG / DXF)'}</span>
+            <span>{isAr ? 'رفع مخطط أوتوكاد / PDF' : 'Upload CAD / PDF'}</span>
           </button>
+
+          <button 
+            type="button"
+            className="btn-secondary" 
+            onClick={() => cameraInputRef.current?.click()}
+            style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', fontWeight: 700, minHeight: '44px' }}
+            title={isAr ? 'التقاط صورة بالموقع من كاميرا الهاتف' : 'Take site photo with device camera'}
+          >
+            <Camera size={18} color="#dc2626" />
+            <span>{isAr ? 'التقاط صورة بالموقع 📷' : 'Take Photo 📷'}</span>
+          </button>
+
           <input 
             ref={fileInputRef}
             type="file" 
             onChange={handleFileInputChange} 
             style={{ display: 'none' }} 
-            accept=".dwg,.dxf,.pdf,.png,.jpg,.jpeg,.bmp" 
+            accept=".dwg,.dxf,.pdf,.png,.jpg,.jpeg,.bmp,image/*" 
+          />
+          <input 
+            ref={cameraInputRef}
+            type="file" 
+            accept="image/*"
+            capture="environment"
+            onChange={handleFileInputChange} 
+            style={{ display: 'none' }} 
           />
         </div>
       </div>
@@ -493,14 +584,85 @@ export default function DrawingReview({ lang, onApplyExtractedFacts }) {
         </div>
       )}
 
+      {/* Mobile Workspace Tabs Switcher (Only visible on screens <= 900px) */}
+      <div className="drawing-mobile-tabs" style={{
+        display: 'none',
+        gap: '6px',
+        padding: '5px',
+        background: '#e2e8f0',
+        borderRadius: '12px',
+        width: '100%'
+      }}>
+        <button
+          type="button"
+          onClick={() => setMobileTab('canvas')}
+          style={{
+            flex: 1,
+            padding: '10px 8px',
+            borderRadius: '8px',
+            border: 'none',
+            fontSize: '0.82rem',
+            fontWeight: 800,
+            cursor: 'pointer',
+            minHeight: '44px',
+            background: mobileTab === 'canvas' ? '#0f172a' : 'transparent',
+            color: mobileTab === 'canvas' ? '#ffffff' : '#334155',
+            boxShadow: mobileTab === 'canvas' ? '0 2px 8px rgba(0,0,0,0.18)' : 'none',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          📐 {isAr ? 'المخطط الهندسي' : 'CAD Canvas'}
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileTab('facts')}
+          style={{
+            flex: 1,
+            padding: '10px 8px',
+            borderRadius: '8px',
+            border: 'none',
+            fontSize: '0.82rem',
+            fontWeight: 800,
+            cursor: 'pointer',
+            minHeight: '44px',
+            background: mobileTab === 'facts' ? '#0f172a' : 'transparent',
+            color: mobileTab === 'facts' ? '#ffffff' : '#334155',
+            boxShadow: mobileTab === 'facts' ? '0 2px 8px rgba(0,0,0,0.18)' : 'none',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          📋 {isAr ? 'البيانات والمطابقة' : 'Plan Facts'}
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileTab('files')}
+          style={{
+            flex: 1,
+            padding: '10px 8px',
+            borderRadius: '8px',
+            border: 'none',
+            fontSize: '0.82rem',
+            fontWeight: 800,
+            cursor: 'pointer',
+            minHeight: '44px',
+            background: mobileTab === 'files' ? '#0f172a' : 'transparent',
+            color: mobileTab === 'files' ? '#ffffff' : '#334155',
+            boxShadow: mobileTab === 'files' ? '0 2px 8px rgba(0,0,0,0.18)' : 'none',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          📁 {isAr ? `الملفات (${files.length})` : `Files (${files.length})`}
+        </button>
+      </div>
+
       {/* Main Grid: Left File List + Right CAD Blueprint Workspace */}
-      <div className="grid-2" style={{ gridTemplateColumns: '360px 1fr', gap: '20px' }}>
+      <div className="drawing-review-grid" data-mobile-tab={mobileTab}>
         
         {/* Left Column: Uploaded Files & Synchronized Detected Facts */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div className="drawing-left-col" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           
           {/* File Picker List */}
-          <div className="card" style={{ padding: '16px' }}>
+          <div className="card drawing-file-picker-card" style={{ padding: '16px' }}>
             <h3 style={{ fontSize: '0.96rem', fontWeight: 700, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Layers size={18} color="#2563eb" />
               {isAr ? 'الملفات والمخططات المرفوعة' : 'Uploaded Drawings & Files'}
@@ -546,7 +708,7 @@ export default function DrawingReview({ lang, onApplyExtractedFacts }) {
           </div>
 
           {/* Synchronized Detected Facts for the Active Drawing */}
-          <div className="card" style={{ padding: '18px' }}>
+          <div className="card drawing-facts-card" style={{ padding: '18px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
               <h3 style={{ fontSize: '0.94rem', fontWeight: 700, color: '#1e293b' }}>
                 {isAr ? 'البيانات المستخرجة آلياً' : 'Detected Plan Facts'}
@@ -679,7 +841,7 @@ export default function DrawingReview({ lang, onApplyExtractedFacts }) {
         </div>
 
         {/* Right Column: AutoCAD Model Space Canvas & Object Inspector */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div className="drawing-right-col" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           
           {/* Engineering Honesty & Simulation Mode Notice */}
           <div style={{
@@ -795,6 +957,10 @@ export default function DrawingReview({ lang, onApplyExtractedFacts }) {
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              onTouchCancel={handleTouchEnd}
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -809,6 +975,7 @@ export default function DrawingReview({ lang, onApplyExtractedFacts }) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: isDragging ? 'grabbing' : 'crosshair',
+                touchAction: 'none',
                 backgroundImage: layersVisibility.grid 
                   ? 'linear-gradient(to right, #0f1c3f 1px, transparent 1px), linear-gradient(to bottom, #0f1c3f 1px, transparent 1px)' 
                   : 'none',

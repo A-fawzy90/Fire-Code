@@ -78,19 +78,20 @@ export default function OfflineModeModal({
       backgroundColor: 'rgba(5, 11, 24, 0.88)',
       backdropFilter: 'blur(12px)',
       WebkitBackdropFilter: 'blur(12px)',
-      padding: '20px',
+      padding: 'clamp(8px, 2.5vw, 20px)',
       overflowY: 'auto'
     }}>
       <div style={{
         position: 'relative',
         width: '100%',
         maxWidth: '720px',
+        maxHeight: '94dvh',
         background: '#ffffff',
         border: '1.5px solid #e2e8f0',
         borderRadius: '24px',
         boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.5)',
         color: '#0f172a',
-        overflow: 'hidden',
+        overflowY: 'auto',
         display: 'flex',
         flexDirection: 'column'
       }}>

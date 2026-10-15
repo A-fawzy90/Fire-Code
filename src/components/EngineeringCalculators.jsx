@@ -570,7 +570,7 @@ export default function EngineeringCalculators({ lang, selectedProject, onOpenAs
       {/* TAB 1: WATER TANK & PUMPS CALCULATOR */}
       {/* ========================================================= */}
       {activeCalc === 'tank_pump' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1fr) minmax(380px, 1.25fr)', gap: '20px' }}>
+        <div className="calc-responsive-grid">
           {/* Inputs Column */}
           <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>
@@ -689,7 +689,7 @@ export default function EngineeringCalculators({ lang, selectedProject, onOpenAs
           {/* Results Column with Diagrams */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Quick Stat Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+            <div className="calc-stat-cards">
               <div className="card" style={{ padding: '14px', borderLeft: isAr ? 'none' : '4px solid #0284c7', borderRight: isAr ? '4px solid #0284c7' : 'none' }}>
                 <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>{isAr ? 'معدل التدفق الكلي' : 'Total Flow Rate'}</span>
                 <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0284c7', marginTop: '2px' }}>
@@ -821,7 +821,7 @@ export default function EngineeringCalculators({ lang, selectedProject, onOpenAs
       {/* TAB 2: EGRESS & STAIR SIZING CALCULATOR */}
       {/* ========================================================= */}
       {activeCalc === 'egress_stairs' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1fr) minmax(380px, 1.25fr)', gap: '20px' }}>
+        <div className="calc-responsive-grid">
           {/* Inputs Column */}
           <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>
@@ -920,7 +920,7 @@ export default function EngineeringCalculators({ lang, selectedProject, onOpenAs
           {/* Results Column with Architectural Section */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Quick Stat Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+            <div className="calc-stat-cards">
               <div className="card" style={{ padding: '14px', borderLeft: isAr ? 'none' : '4px solid #16a34a', borderRight: isAr ? '4px solid #16a34a' : 'none' }}>
                 <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>{isAr ? 'عرض السلم الصافي المعتمد' : 'Required Stair Width'}</span>
                 <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#16a34a', marginTop: '2px' }}>
@@ -1057,7 +1057,7 @@ export default function EngineeringCalculators({ lang, selectedProject, onOpenAs
       {/* TAB 3: STAIRWELL PRESSURIZATION & SMOKE CONTROL */}
       {/* ========================================================= */}
       {activeCalc === 'smoke_pressurization' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1fr) minmax(380px, 1.25fr)', gap: '20px' }}>
+        <div className="calc-responsive-grid">
           {/* Inputs Column */}
           <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>
@@ -1212,7 +1212,7 @@ export default function EngineeringCalculators({ lang, selectedProject, onOpenAs
           {/* Results Column with Pressurization Schematic */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Quick Stat Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+            <div className="calc-stat-cards">
               <div className="card" style={{ padding: '14px', borderLeft: isAr ? 'none' : '4px solid #16a34a', borderRight: isAr ? '4px solid #16a34a' : 'none' }}>
                 <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>{isAr ? 'فرق الضغط الكودي' : 'Design Pressure Delta'}</span>
                 <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#16a34a', marginTop: '2px' }}>

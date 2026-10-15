@@ -238,13 +238,14 @@ service cloud.firestore {
       backgroundColor: 'rgba(5, 11, 24, 0.85)',
       backdropFilter: 'blur(10px)',
       WebkitBackdropFilter: 'blur(10px)',
-      padding: '20px',
+      padding: 'clamp(8px, 2.5vw, 20px)',
       overflowY: 'auto'
     }}>
       <div style={{
         position: 'relative',
         width: '100%',
         maxWidth: '680px',
+        maxHeight: '94dvh',
         background: 'linear-gradient(165deg, #0f172a 0%, #090d16 100%)',
         border: '1px solid rgba(245, 158, 11, 0.3)',
         borderRadius: '20px',
@@ -496,7 +497,7 @@ service cloud.firestore {
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div className="grid-2" style={{ gap: '10px' }}>
               <div>
                 <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: '4px' }}>
                   Project ID (مثبت لمشروعك):
@@ -622,7 +623,7 @@ service cloud.firestore {
               <span>{isAr ? 'إجراءات المزامنة السحابية (Firestore Cloud Sync):' : 'Cloud Sync Operations:'}</span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div className="grid-2" style={{ gap: '10px' }}>
               {/* Push to Cloud */}
               <button
                 type="button"

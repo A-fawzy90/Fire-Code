@@ -78,12 +78,13 @@ export default function SplashScreen({
         position: 'relative',
         width: '100%',
         maxWidth: '940px',
+        maxHeight: '92dvh',
         background: 'linear-gradient(165deg, #0f172a 0%, #090d16 100%)',
         border: '1px solid rgba(249, 115, 22, 0.3)',
         borderRadius: '24px',
         boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 40px rgba(239, 68, 68, 0.2)',
         color: '#f8fafc',
-        overflow: 'hidden',
+        overflowY: 'auto',
         display: 'flex',
         flexDirection: 'column'
       }}>
@@ -94,7 +95,11 @@ export default function SplashScreen({
           justifyContent: 'space-between',
           padding: '16px 24px',
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-          background: 'rgba(255, 255, 255, 0.02)'
+          background: 'rgba(255, 255, 255, 0.02)',
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
+          backdropFilter: 'blur(8px)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{
@@ -142,11 +147,8 @@ export default function SplashScreen({
         </div>
 
         {/* Content Body Grid */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(320px, 1fr) minmax(340px, 1.15fr)',
-          gap: '24px',
-          padding: '28px',
+        <div className="splash-modal-grid" style={{
+          padding: 'clamp(14px, 3vw, 28px)',
           alignItems: 'center'
         }}>
           {/* Left Column: Fire Triangle Visual Graphic */}
@@ -450,7 +452,7 @@ export default function SplashScreen({
             {/* Quick Feature Badges */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))',
               gap: '8px',
               fontSize: '0.72rem'
             }}>

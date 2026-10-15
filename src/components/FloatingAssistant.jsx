@@ -856,11 +856,12 @@ export default function FloatingAssistant({ lang, selectedProject, isOpen, setIs
           <form 
             onSubmit={(e) => { e.preventDefault(); handleSend(inputVal); }}
             style={{
-              padding: '12px 14px',
+              padding: '12px 14px calc(12px + var(--safe-bottom)) 14px',
               background: '#ffffff',
               borderTop: '1px solid #e2e8f0',
               display: 'flex',
-              gap: '8px'
+              gap: '8px',
+              alignItems: 'center'
             }}
           >
             <input 
@@ -868,7 +869,7 @@ export default function FloatingAssistant({ lang, selectedProject, isOpen, setIs
               value={inputVal}
               onChange={(e) => setInputVal(e.target.value)}
               placeholder={searchMode === 'general' 
-                ? (isAr ? "اكتب سؤالك العام عن الكود المصري (مثال: اشتراطات غرف المحول، مسافات الارتحال)..." : "Ask any general Egyptian Fire Code question...") 
+                ? (isAr ? "اكتب سؤالك العام عن الكود المصري..." : "Ask any Egyptian Fire Code question...") 
                 : (isAr ? `اكتب سؤالك بخصوص مشروع (${selectedProject?.titleAr?.slice(0, 18)}...)...` : "Ask about this project...")}
               disabled={loading}
               style={{
@@ -876,9 +877,10 @@ export default function FloatingAssistant({ lang, selectedProject, isOpen, setIs
                 padding: '10px 14px',
                 borderRadius: '8px',
                 border: '1px solid #cbd5e1',
-                fontSize: '0.86rem',
+                fontSize: '16px',
                 fontFamily: 'inherit',
-                outline: 'none'
+                outline: 'none',
+                minHeight: '44px'
               }}
             />
             <button
@@ -890,6 +892,8 @@ export default function FloatingAssistant({ lang, selectedProject, isOpen, setIs
                 border: 'none',
                 borderRadius: '8px',
                 padding: '0 16px',
+                minHeight: '44px',
+                minWidth: '46px',
                 cursor: inputVal.trim() && !loading ? 'pointer' : 'not-allowed',
                 display: 'flex',
                 alignItems: 'center',
@@ -897,7 +901,7 @@ export default function FloatingAssistant({ lang, selectedProject, isOpen, setIs
                 transition: 'background 0.2s'
               }}
             >
-              <Send size={16} />
+              <Send size={18} />
             </button>
           </form>
         </div>

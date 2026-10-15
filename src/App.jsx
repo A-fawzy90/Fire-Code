@@ -118,6 +118,35 @@ export default function App() {
   });
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
 
+  // Theme Mode (Dark / Light) with LocalStorage and system preference
+  const [theme, setTheme] = useState(() => {
+    try {
+      const savedTheme = localStorage.getItem('agy_fire_code_theme');
+      if (savedTheme === 'dark' || savedTheme === 'light') {
+        return savedTheme;
+      }
+      if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark';
+      }
+    } catch (e) {
+      console.warn('Theme init error:', e);
+    }
+    return 'light';
+  });
+
+  useEffect(() => {
+    try {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('agy_fire_code_theme', theme);
+    } catch (e) {
+      console.warn('Theme storage error:', e);
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
+
   const handleAdminLoginSuccess = () => {
     setIsAdmin(true);
     try {
@@ -381,6 +410,8 @@ export default function App() {
         isAdmin={isAdmin}
         onOpenAdminLogin={() => setIsAdminLoginOpen(true)}
         onLogoutAdmin={handleAdminLogout}
+        theme={theme}
+        toggleTheme={toggleTheme}
       />
 
       {/* Main Content View Switcher wrapped in TabErrorBoundary */}

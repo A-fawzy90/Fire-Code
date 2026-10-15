@@ -1,7 +1,7 @@
 # كود مشروع مساعد كود الحريق المصري بالكامل في ملف واحد
 
 > تصميم وتطوير: المهندس / أحمد فوزي - مهندس أنظمة مكافحة وإنذار الحريق
-> يتضمن الكود المصدري الكامل لجميع الملفات والمكونات والخدمات الهندسية ومكتبة أخطاء الرفض ونظام العمل الميداني بدون إنترنت (Offline PWA) ونظام الصلاحيات المزدوج (واجهة الزوار العامة وواجهة الإدارة والتحكم).
+> يتضمن الكود المصدري الكامل لجميع الملفات والمكونات والخدمات الهندسية ومكتبة أخطاء الرفض ونظام العمل الميداني بدون إنترنت (Offline PWA) ونظام الصلاحيات المزدوج مع دعم الوضعين الداكن والفاتح (Dark / Light Mode).
 
 ================================================================================
 📁 ملف: package.json
@@ -412,6 +412,174 @@ createRoot(document.getElementById('root')).render(
   --safe-right: env(safe-area-inset-right, 0px);
 }
 
+/* Dark Mode Color Palette & Surface Tokens */
+[data-theme='dark'] {
+  --bg-primary: #0a0f1d;
+  --bg-secondary: #0f172a;
+  --bg-card: #131c2e;
+  --bg-card-hover: #1a263d;
+  
+  --surface-dark: #060913;
+  --surface-navy: #0b1120;
+  --surface-slate: #1e293b;
+  --surface-border: rgba(255, 255, 255, 0.12);
+  
+  /* Text */
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-inverse: #0f172a;
+
+  /* Accents */
+  --sand-50: #141b2b;
+  --sand-100: #1e293b;
+  --sand-200: #334155;
+  --sand-600: #d4b483;
+
+  /* Status Indicators for Dark Mode with glowing subtle backgrounds */
+  --status-green-bg: rgba(16, 185, 129, 0.16);
+  --status-green-text: #6ee7b7;
+  --status-green-border: rgba(16, 185, 129, 0.35);
+
+  --status-amber-bg: rgba(245, 158, 11, 0.16);
+  --status-amber-text: #fde047;
+  --status-amber-border: rgba(245, 158, 11, 0.35);
+
+  --status-red-bg: rgba(239, 68, 68, 0.2);
+  --status-red-text: #fca5a5;
+  --status-red-border: rgba(239, 68, 68, 0.4);
+
+  --status-blue-bg: rgba(59, 130, 246, 0.18);
+  --status-blue-text: #93c5fd;
+  --status-blue-border: rgba(59, 130, 246, 0.35);
+
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.6);
+  --shadow-md: 0 4px 12px -1px rgba(0, 0, 0, 0.7);
+  --shadow-lg: 0 10px 24px -3px rgba(0, 0, 0, 0.8);
+  --shadow-xl: 0 20px 32px -5px rgba(0, 0, 0, 0.9);
+}
+
+/* Global Smooth Theme Transition */
+body, 
+.main-content, 
+.card, 
+.header-surface, 
+.disclaimer-strip, 
+.btn-secondary, 
+input, 
+select, 
+textarea,
+.citation-box,
+.source-verbatim-text,
+.ai-drawer {
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+/* Specific Dark Mode Refinements */
+[data-theme='dark'] body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .card {
+  background: var(--bg-card);
+  border-color: var(--surface-border);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+}
+
+[data-theme='dark'] .btn-secondary {
+  background: #1e293b;
+  color: #f1f5f9;
+  border-color: #334155;
+}
+
+[data-theme='dark'] .btn-secondary:hover {
+  background: #273549;
+  border-color: #475569;
+}
+
+[data-theme='dark'] .citation-box {
+  background: #0f172a;
+  border-color: var(--fire-red-600);
+}
+
+[data-theme='dark'] .citation-header {
+  color: #f1f5f9;
+}
+
+[data-theme='dark'] .source-verbatim-text {
+  background: #141c2e;
+  border-color: #273549;
+  color: #cbd5e1;
+}
+
+[data-theme='dark'] .ai-drawer {
+  background: #101726;
+  border-color: #273549;
+  color: #f8fafc;
+}
+
+[data-theme='dark'] input,
+[data-theme='dark'] select,
+[data-theme='dark'] textarea {
+  background-color: #151e30 !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+
+[data-theme='dark'] input::placeholder,
+[data-theme='dark'] textarea::placeholder {
+  color: #64748b !important;
+}
+
+[data-theme='dark'] .table-responsive table {
+  background: #131c2e;
+}
+
+[data-theme='dark'] th {
+  background: #1e293b !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+
+[data-theme='dark'] td {
+  border-color: #1e293b !important;
+  color: #cbd5e1 !important;
+}
+
+[data-theme='dark'] tr:hover td {
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+[data-theme='dark'] .disclaimer-strip {
+  background: linear-gradient(90deg, #2a1b05 0%, #1f1403 50%, #2a1b05 100%);
+  border-bottom: 2px solid #b45309;
+  border-top: 1px solid rgba(245, 158, 11, 0.25);
+  color: #fef08a;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme='dark'] .disclaimer-strip-text {
+  color: #fef08a;
+}
+
+[data-theme='dark'] .modal-content,
+[data-theme='dark'] .dialog-content {
+  background: #131c2e;
+  color: #f8fafc;
+  border-color: #273549;
+}
+
+[data-theme='dark'] .mobile-more-sheet {
+  background: #0f172a;
+  border-top-color: #273549;
+}
+
+[data-theme='dark'] .mobile-bottom-nav {
+  background: #0a0e1a;
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -726,6 +894,37 @@ button {
 
 .lang-toggle-btn:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+.theme-toggle-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #f1f5f9;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 4px 11px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.theme-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.32);
+  transform: translateY(-1px);
+}
+
+.theme-toggle-btn svg {
+  transition: transform 0.3s ease;
+}
+
+.theme-toggle-btn:hover svg {
+  transform: rotate(20deg) scale(1.12);
 }
 
 /* Card Styles */
@@ -1526,6 +1725,35 @@ export default function App() {
   });
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
 
+  // Theme Mode (Dark / Light) with LocalStorage and system preference
+  const [theme, setTheme] = useState(() => {
+    try {
+      const savedTheme = localStorage.getItem('agy_fire_code_theme');
+      if (savedTheme === 'dark' || savedTheme === 'light') {
+        return savedTheme;
+      }
+      if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark';
+      }
+    } catch (e) {
+      console.warn('Theme init error:', e);
+    }
+    return 'light';
+  });
+
+  useEffect(() => {
+    try {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('agy_fire_code_theme', theme);
+    } catch (e) {
+      console.warn('Theme storage error:', e);
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
+
   const handleAdminLoginSuccess = () => {
     setIsAdmin(true);
     try {
@@ -1789,6 +2017,8 @@ export default function App() {
         isAdmin={isAdmin}
         onOpenAdminLogin={() => setIsAdminLoginOpen(true)}
         onLogoutAdmin={handleAdminLogout}
+        theme={theme}
+        toggleTheme={toggleTheme}
       />
 
       {/* Main Content View Switcher wrapped in TabErrorBoundary */}
@@ -2140,7 +2370,9 @@ import {
   Sparkles,
   Cloud,
   Lock,
-  ShieldCheck
+  ShieldCheck,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { OFFICIAL_METADATA } from '../data/codeKnowledgeBase';
 import OfflineModeModal from './OfflineModeModal';
@@ -2158,7 +2390,9 @@ export default function Navbar({
   onOpenFirebase,
   isAdmin = false,
   onOpenAdminLogin,
-  onLogoutAdmin
+  onLogoutAdmin,
+  theme = 'light',
+  toggleTheme
 }) {
   const isAr = lang === 'ar';
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
@@ -2389,6 +2623,19 @@ export default function Navbar({
           >
             <Languages size={14} />
             {isAr ? 'English' : 'عربي'}
+          </button>
+
+          <button 
+            type="button"
+            className="theme-toggle-btn"
+            onClick={toggleTheme}
+            title={theme === 'dark' 
+              ? (isAr ? 'التحويل إلى الوضع الفاتح (Light Mode)' : 'Switch to Light Mode') 
+              : (isAr ? 'التحويل إلى الوضع الداكن (Dark Mode)' : 'Switch to Dark Mode')}
+            aria-label="Toggle Theme"
+          >
+            {theme === 'dark' ? <Sun size={14} color="#f59e0b" /> : <Moon size={14} color="#93c5fd" />}
+            <span>{theme === 'dark' ? (isAr ? 'فاتح ☀️' : 'Light ☀️') : (isAr ? 'داكن 🌙' : 'Dark 🌙')}</span>
           </button>
         </div>
       </div>
@@ -2666,6 +2913,28 @@ export default function Navbar({
               >
                 <Languages size={14} />
                 <span>{isAr ? 'English' : 'عربي'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { toggleTheme(); }}
+                style={{
+                  background: theme === 'dark' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                  border: theme === 'dark' ? '1px solid rgba(245, 158, 11, 0.35)' : '1px solid rgba(59, 130, 246, 0.35)',
+                  color: theme === 'dark' ? '#fde047' : '#93c5fd',
+                  borderRadius: '8px',
+                  padding: '10px 8px',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  justifyContent: 'center',
+                  cursor: 'pointer'
+                }}
+              >
+                {theme === 'dark' ? <Sun size={14} color="#f59e0b" /> : <Moon size={14} color="#93c5fd" />}
+                <span>{theme === 'dark' ? (isAr ? 'الوضع الفاتح ☀️' : 'Light Mode ☀️') : (isAr ? 'الوضع الداكن 🌙' : 'Dark Mode 🌙')}</span>
               </button>
             </div>
           </div>

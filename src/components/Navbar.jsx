@@ -19,7 +19,9 @@ import {
   Sparkles,
   Cloud,
   Lock,
-  ShieldCheck
+  ShieldCheck,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { OFFICIAL_METADATA } from '../data/codeKnowledgeBase';
 import OfflineModeModal from './OfflineModeModal';
@@ -37,7 +39,9 @@ export default function Navbar({
   onOpenFirebase,
   isAdmin = false,
   onOpenAdminLogin,
-  onLogoutAdmin
+  onLogoutAdmin,
+  theme = 'light',
+  toggleTheme
 }) {
   const isAr = lang === 'ar';
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
@@ -268,6 +272,19 @@ export default function Navbar({
           >
             <Languages size={14} />
             {isAr ? 'English' : 'عربي'}
+          </button>
+
+          <button 
+            type="button"
+            className="theme-toggle-btn"
+            onClick={toggleTheme}
+            title={theme === 'dark' 
+              ? (isAr ? 'التحويل إلى الوضع الفاتح (Light Mode)' : 'Switch to Light Mode') 
+              : (isAr ? 'التحويل إلى الوضع الداكن (Dark Mode)' : 'Switch to Dark Mode')}
+            aria-label="Toggle Theme"
+          >
+            {theme === 'dark' ? <Sun size={14} color="#f59e0b" /> : <Moon size={14} color="#93c5fd" />}
+            <span>{theme === 'dark' ? (isAr ? 'فاتح ☀️' : 'Light ☀️') : (isAr ? 'داكن 🌙' : 'Dark 🌙')}</span>
           </button>
         </div>
       </div>
@@ -545,6 +562,28 @@ export default function Navbar({
               >
                 <Languages size={14} />
                 <span>{isAr ? 'English' : 'عربي'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { toggleTheme(); }}
+                style={{
+                  background: theme === 'dark' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                  border: theme === 'dark' ? '1px solid rgba(245, 158, 11, 0.35)' : '1px solid rgba(59, 130, 246, 0.35)',
+                  color: theme === 'dark' ? '#fde047' : '#93c5fd',
+                  borderRadius: '8px',
+                  padding: '10px 8px',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  justifyContent: 'center',
+                  cursor: 'pointer'
+                }}
+              >
+                {theme === 'dark' ? <Sun size={14} color="#f59e0b" /> : <Moon size={14} color="#93c5fd" />}
+                <span>{theme === 'dark' ? (isAr ? 'الوضع الفاتح ☀️' : 'Light Mode ☀️') : (isAr ? 'الوضع الداكن 🌙' : 'Dark Mode 🌙')}</span>
               </button>
             </div>
           </div>

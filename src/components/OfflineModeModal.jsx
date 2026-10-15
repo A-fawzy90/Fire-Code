@@ -35,28 +35,32 @@ export default function OfflineModeModal({
       color: '#2563eb',
       titleAr: 'تصفح الكود المصري ٣٠٥ والقرار ٢٥٥/٢٠٢٦',
       titleEn: 'Full Egyptian Fire Code 305 & Decree 255/2026',
-      descAr: 'جميع نصوص الأجزاء الثلاثة (البنائية، الميكانيكية، الكهربائية) مخزنة محلياً بالكامل ومفهرسة للبحث برقم البند بدون نت.'
+      descAr: 'جميع نصوص الأجزاء الثلاثة (البنائية، الميكانيكية، الكهربائية) مخزنة محلياً بالكامل ومفهرسة للبحث برقم البند بدون نت.',
+      descEn: 'All three parts (Architectural, Mechanical, Electrical) are bundled locally and indexed for clause lookups without an internet connection.'
     },
     {
       icon: Calculator,
       color: '#dc2626',
       titleAr: 'الحاسبات الهندسية التفاعلية اللحظية',
       titleEn: 'Interactive Real-Time Engineering Calculators',
-      descAr: 'حساب سعات خزانات مياه الحريق، تدفق الـ GPM، قدرات طلمبات الديزل والكهرباء، عروض السلالم (٧٫٦ مم)، ومراوح الضغط وسحب الدخان.'
+      descAr: 'حساب سعات خزانات مياه الحريق، تدفق الـ GPM، قدرات طلمبات الديزل والكهرباء، عروض السلالم (٧٫٦ مم)، ومراوح الضغط وسحب الدخان.',
+      descEn: 'Hydraulic calculations for water tanks, GPM demand, diesel/electric pumps, staircase widths (7.6 mm/person), and stair pressurization.'
     },
     {
       icon: FileCheck2,
       color: '#059669',
       titleAr: 'فحص وتقييم المشاريع والارتفاعات',
-      titleEn: 'Project Assessment & 24m Height Verification',
-      descAr: 'تحديد اشتراطات الارتفاع، مسالك الهروب، وحسابات حمولة الإشغال ومسافات الارتحال تعمل بمحرك خوارزمي محلي سريع.'
+      titleEn: 'Project Assessment & Height Verification',
+      descAr: 'تحديد اشتراطات الارتفاع، مسالك الهروب، وحسابات حمولة الإشغال ومسافات الارتحال تعمل بمحرك خوارزمي محلي سريع.',
+      descEn: 'Evaluate building heights (16m / 22m / 24m thresholds), travel distances, and occupant loads via high-speed client-side algorithms.'
     },
     {
       icon: HardDrive,
       color: '#d97706',
-      titleAr: 'الحفظ المحلي التلقائي الدائم (Local Storage)',
-      titleEn: 'Persistent Local Device Storage',
-      descAr: 'تُحفظ كافة بيانات مشاريعك ومسوداتك وتقاريرك محلياً على جهازك، وتتزامن تلقائياً مع السحابة فور عودة الإنترنت.'
+      titleAr: 'التخزين المحلي على ذاكرة الجهاز (LocalStorage)',
+      titleEn: 'Device Browser Storage (LocalStorage)',
+      descAr: 'تُحفظ كافة بيانات مشاريعك ومسوداتك وتقاريرك محلياً في ذاكرة متصفحك. يوصى بالمزامنة السحابية أو تصدير ملف للحفظ الدائم.',
+      descEn: 'Projects, calculations, and drafts persist in your local browser storage. Use cloud sync or file export for permanent disaster-proof archival.'
     }
   ];
 
@@ -196,12 +200,54 @@ export default function OfflineModeModal({
                     {isAr ? feat.titleAr : feat.titleEn}
                   </h4>
                   <p style={{ margin: '4px 0 0 0', fontSize: '0.78rem', color: '#64748b', lineHeight: 1.4 }}>
-                    {isAr ? feat.descAr : feat.descAr}
+                    {isAr ? feat.descAr : feat.descEn}
                   </p>
                 </div>
               </div>
             ))}
           </div>
+
+          {/* Optional Field Mode Quick Toggle */}
+          {onToggleFieldMode && (
+            <div style={{
+              background: '#f8fafc',
+              border: '1px solid #cbd5e1',
+              borderRadius: '14px',
+              padding: '12px 18px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px'
+            }}>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: '0.86rem', color: '#0f172a' }}>
+                  {isAr ? '⚡ تفعيل الوضع الميداني السريع (Field Mode):' : '⚡ Enable Field Inspection Mode:'}
+                </div>
+                <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                  {isAr 
+                    ? 'يُقلل المؤثرات البصرية ويركز على الحاسبات السريعة واختبارات الموقع للبدرومات ومواقع الإنشاء.'
+                    : 'Streamlines UI animations and focuses on essential job-site calculators and offline review.'}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={onToggleFieldMode}
+                style={{
+                  background: isFieldMode ? '#16a34a' : '#64748b',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '6px 14px',
+                  borderRadius: '20px',
+                  fontSize: '0.78rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  transition: 'background 0.2s ease'
+                }}
+              >
+                {isFieldMode ? (isAr ? 'مفعل ✔️' : 'Active ✔️') : (isAr ? 'تعطيل' : 'Off')}
+              </button>
+            </div>
+          )}
 
           {/* Standalone File Direct Access */}
           <div style={{
@@ -237,8 +283,8 @@ export default function OfflineModeModal({
                 </div>
                 <div style={{ fontSize: '0.76rem', color: '#94a3b8' }}>
                   {isAr 
-                    ? 'Egyptian_Fire_Code_Complete_SingleFile.html (حوالي 1.3 ميجابايت يفتح دبل كليك في أي متصفح)' 
-                    : 'Self-contained 1.3MB HTML file that opens anywhere offline.'}
+                    ? 'Egyptian_Fire_Code_Complete_SingleFile.html (حوالي 1.45 ميجابايت مدمج بالكامل ويفتح مباشرة في أي متصفح)' 
+                    : 'Self-contained 1.45MB HTML bundle that opens directly in any browser.'}
                 </div>
               </div>
             </div>

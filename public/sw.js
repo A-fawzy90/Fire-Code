@@ -1,32 +1,40 @@
 // Service Worker for Egyptian Fire Code Assistant
+// Version: v2.0.26 (Decree 255/2026 Aligned)
 // Engineered for 100% Offline Field Operations (Basements & Construction Sites)
-// Prepared by: Eng. Ahmed Fawzy
+// Prepared by: Eng. Ahmed Fawzy - Fire Fighting & Alarm Systems Engineer
 
-const CACHE_NAME = 'egyptian-fire-code-v1';
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/favicon.svg',
-  '/icons.svg'
+const CACHE_NAME = 'egyptian-fire-code-v2-2026';
+const PRECACHE_ASSETS = [
+  './',
+  './index.html',
+  './manifest.json',
+  './favicon.svg',
+  './icons.svg'
 ];
 
-// Install: Cache critical static shell
+// Install: Cache critical static shell safely (without aborting if an optional asset is missing)
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
+    caches.open(CACHE_NAME).then(async (cache) => {
+      await Promise.allSettled(
+        PRECACHE_ASSETS.map((asset) =>
+          cache.add(asset).catch((err) => {
+            console.warn('[SW] Precache asset skipped:', asset, err?.message);
+          })
+        )
+      );
     }).then(() => self.skipWaiting())
   );
 });
 
-// Activate: Clean up old caches
+// Activate: Clean up older cache versions and take control immediately
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
+            console.log('[SW] Purging outdated cache:', key);
             return caches.delete(key);
           }
         })
@@ -35,20 +43,31 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch: Network first with Cache fallback for navigation, Cache first for assets
+// Fetch Strategy:
+// 1. Firebase / Backend calls: Network only (with clean JSON offline response)
+// 2. Navigation (HTML): Network first with fallback to cached index.html
+// 3. Static Assets & Fonts: Stale-While-Revalidate with proper response cloning
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
 
-  // Ignore non-GET or chrome-extension requests
+  // Ignore non-GET or browser extension schemes
   if (req.method !== 'GET' || url.protocol.startsWith('chrome-extension')) {
     return;
   }
 
-  // Handle Firebase and Google Analytics as network-only (with offline silence)
-  if (url.hostname.includes('firebase') || url.hostname.includes('googleapis.com') && !url.pathname.includes('/css')) {
+  // Handle Firebase and Google Analytics as network-only (do NOT block Google Fonts)
+  const isCloudOrAnalytics = 
+    url.hostname.includes('firebase') || 
+    (url.hostname.includes('googleapis.com') && !url.hostname.includes('fonts.googleapis.com'));
+
+  if (isCloudOrAnalytics) {
     event.respondWith(
-      fetch(req).catch(() => new Response(JSON.stringify({ offline: true }), { headers: { 'Content-Type': 'application/json' } }))
+      fetch(req).catch(() => 
+        new Response(JSON.stringify({ offline: true, timestamp: Date.now() }), { 
+          headers: { 'Content-Type': 'application/json' } 
+        })
+      )
     );
     return;
   }
@@ -58,40 +77,52 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(req)
         .then((networkRes) => {
-          const clone = networkRes.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+          if (networkRes && networkRes.status === 200) {
+            const clone = networkRes.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+          }
           return networkRes;
         })
-        .catch(() => {
-          return caches.match('/index.html') || caches.match('/');
+        .catch(async () => {
+          const cachedIndex = 
+            (await caches.match('./index.html')) || 
+            (await caches.match('/index.html')) || 
+            (await caches.match('./')) || 
+            (await caches.match('/'));
+          return cachedIndex || new Response(
+            '<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"/><title>وضع عدم الاتصال</title></head><body style="font-family:sans-serif;text-align:center;padding:40px;"><h2>⚡ أنت الآن في وضع العمل بدون إنترنت</h2><p>يرجى فتح التطبيق مرة واحدة أثناء الاتصال بالإنترنت لتخزين كافة البيانات محلياً.</p></body></html>', 
+            { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+          );
         })
     );
     return;
   }
 
-  // Static Assets (JS, CSS, SVGs, Fonts): Cache first, fallback to network
+  // Static Assets (JS, CSS, SVGs, Fonts): Stale-While-Revalidate
   event.respondWith(
     caches.match(req).then((cachedRes) => {
       if (cachedRes) {
-        // Fetch in background to update cache (stale-while-revalidate)
-        fetch(req).then((networkRes) => {
-          if (networkRes.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => cache.put(req, networkRes));
-          }
-        }).catch(() => {/* Silent offline fallback */});
+        // Fetch in background to update cache (with response cloning to prevent 'body already used' error)
+        fetch(req)
+          .then((networkRes) => {
+            if (networkRes && networkRes.status === 200) {
+              const clone = networkRes.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+            }
+          })
+          .catch(() => {/* Silent offline fallback */});
         return cachedRes;
       }
 
       return fetch(req)
         .then((networkRes) => {
-          if (networkRes.status === 200) {
+          if (networkRes && networkRes.status === 200) {
             const clone = networkRes.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
           }
           return networkRes;
         })
         .catch(() => {
-          // If offline and requesting an image or font, return empty fallback
           return new Response('', { status: 408, statusText: 'Offline Mode' });
         });
     })

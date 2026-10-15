@@ -73,7 +73,7 @@ export default function Navbar({
               : 'Housing & Building National Research Center (HBRC) in coordination with Civil Protection'}
           </span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div className="authority-controls">
           {selectedProject && (
             <div style={{ fontSize: '0.82rem', color: '#fef08a', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ color: '#94a3b8' }}>{isAr ? 'المشروع النشط:' : 'Active Project:'}</span>

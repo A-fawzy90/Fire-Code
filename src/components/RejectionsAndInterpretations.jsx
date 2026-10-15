@@ -42,35 +42,35 @@ export default function RejectionsAndInterpretations({
   const [activeSubTab, setActiveSubTab] = useState('rejections');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedInterp, setExpandedInterp] = useState(null);
+  const [expandedInterp, setExpandedInterp] = useState(CODE_INTERPRETATIONS[0]?.id || null);
   const [expandedFaq, setExpandedFaq] = useState(null);
 
-  // Filter rejections
+  // Filter rejections with safe optional chaining
   const filteredRejections = COMMON_REJECTIONS.filter(item => {
     const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
     const matchesSearch = !searchQuery.trim() || 
-      item.titleAr.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.titleEn.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.authorityNoteAr.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.codeClauseAr.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
+      item.titleAr?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.titleEn?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.authorityNoteAr?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.codeClauseAr?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.tags?.some(t => t?.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesCategory && matchesSearch;
   });
 
-  // Filter interpretations
+  // Filter interpretations with safe optional chaining
   const filteredInterpretations = CODE_INTERPRETATIONS.filter(item => {
     return !searchQuery.trim() ||
-      item.topicAr.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.questionAr.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.officialRulingAr.toLowerCase().includes(searchQuery.toLowerCase());
+      item.topicAr?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.questionAr?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.officialRulingAr?.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
-  // Filter FAQs
+  // Filter FAQs with safe optional chaining
   const filteredFaqs = FREQUENTLY_ASKED_QUESTIONS.filter(item => {
     return !searchQuery.trim() ||
-      item.qAr.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.aAr.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.tag.toLowerCase().includes(searchQuery.toLowerCase());
+      item.qAr?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.aAr?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.tag?.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
   const handleAskAIAboutItem = (item) => {
@@ -528,7 +528,7 @@ export default function RejectionsAndInterpretations({
 
                     {onSwitchTab && (
                       <button
-                        onClick={() => onSwitchTab('assessment')}
+                        onClick={() => onSwitchTab('assessment', { fromRejection: item.id, itemTitle: item.titleAr, category: item.category })}
                         style={{
                           background: '#f8fafc',
                           color: '#0f172a',
@@ -584,7 +584,7 @@ export default function RejectionsAndInterpretations({
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             {filteredInterpretations.map((interp, index) => {
-              const isExpanded = expandedInterp === interp.id || index === 0;
+              const isExpanded = expandedInterp === interp.id;
               return (
                 <div 
                   key={interp.id}
@@ -658,7 +658,7 @@ export default function RejectionsAndInterpretations({
                           <span>{isAr ? 'التفسير والقرار الهندسي المعتمد:' : 'Official Engineering Ruling:'}</span>
                         </div>
                         <p style={{ margin: 0, color: '#1e3a8a', lineHeight: 1.6 }}>
-                          {isAr ? interp.officialRulingAr : interp.questionEn}
+                          {isAr ? interp.officialRulingAr : (interp.officialRulingEn || interp.officialRulingAr)}
                         </p>
                       </div>
 

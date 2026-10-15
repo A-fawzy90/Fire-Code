@@ -550,13 +550,17 @@ export default function App() {
       />
 
       {/* Firebase Cloud Database Sync & Management Modal */}
-      <FirebaseSyncModal 
-        isOpen={isFirebaseModalOpen}
-        onClose={() => setIsFirebaseModalOpen(false)}
-        lang={lang}
-        projects={projects}
-        onProjectsUpdated={(newProjects) => setProjects(newProjects)}
-      />
+      <TabErrorBoundary lang={lang}>
+        {isFirebaseModalOpen && (
+          <FirebaseSyncModal 
+            isOpen={isFirebaseModalOpen}
+            onClose={() => setIsFirebaseModalOpen(false)}
+            lang={lang}
+            projects={projects}
+            onProjectsUpdated={(newProjects) => setProjects(newProjects)}
+          />
+        )}
+      </TabErrorBoundary>
     </div>
   );
 }

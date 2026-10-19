@@ -1,9 +1,9 @@
 // Service Worker for Egyptian Fire Code Assistant
-// Version: v2.0.26 (Decree 255/2026 Aligned)
+// Version: v3.0.26 (Decree 255/2026 & NFPA Gas Flooding Aligned)
 // Engineered for 100% Offline Field Operations (Basements & Construction Sites)
 // Prepared by: Eng. Ahmed Fawzy - Fire Fighting & Alarm Systems Engineer
 
-const CACHE_NAME = 'egyptian-fire-code-v2-2026';
+const CACHE_NAME = 'egyptian-fire-code-v3-2026-gas';
 const PRECACHE_ASSETS = [
   './',
   './index.html',

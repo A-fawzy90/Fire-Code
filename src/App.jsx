@@ -10,6 +10,7 @@ import AdminView from './components/AdminView';
 import FloatingAssistant from './components/FloatingAssistant';
 import SplashScreen from './components/SplashScreen';
 import EngineeringCalculators from './components/EngineeringCalculators';
+import GasFloodingCalculator from './components/GasFloodingCalculator';
 import FirebaseSyncModal from './components/FirebaseSyncModal';
 import RejectionsAndInterpretations from './components/RejectionsAndInterpretations';
 import AdminLoginModal from './components/AdminLoginModal';
@@ -455,6 +456,14 @@ export default function App() {
 
           {currentTab === 'calculators' && (
             <EngineeringCalculators 
+              lang={lang}
+              selectedProject={selectedProject}
+              onOpenAssistant={handleOpenAssistantWithQuery}
+            />
+          )}
+
+          {currentTab === 'gas_flooding' && (
+            <GasFloodingCalculator 
               lang={lang}
               selectedProject={selectedProject}
               onOpenAssistant={handleOpenAssistantWithQuery}

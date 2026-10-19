@@ -20,6 +20,7 @@ import {
   Sliders
 } from 'lucide-react';
 import { OFFICIAL_METADATA } from '../data/codeKnowledgeBase';
+import GasFloodingCalculator from './GasFloodingCalculator';
 
 export default function EngineeringCalculators({ lang, selectedProject, onOpenAssistant }) {
   const isAr = lang === 'ar';
@@ -562,6 +563,28 @@ export default function EngineeringCalculators({ lang, selectedProject, onOpenAs
           >
             <span>🌀</span>
             <span>{isAr ? '٣. مراوح ضغط السلالم وسحب الدخان' : '3. Pressurization & Smoke Control'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveCalc('gas_flooding')}
+            style={{
+              background: activeCalc === 'gas_flooding' ? '#0284c7' : 'rgba(255, 255, 255, 0.06)',
+              color: '#ffffff',
+              border: activeCalc === 'gas_flooding' ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.12)',
+              borderRadius: '8px',
+              padding: '8px 16px',
+              fontSize: '0.84rem',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: 'pointer',
+              boxShadow: activeCalc === 'gas_flooding' ? '0 4px 12px rgba(2, 132, 199, 0.4)' : 'none'
+            }}
+          >
+            <span>💨</span>
+            <span>{isAr ? '٤. غرف الغمر الكلي بالغاز (CO2 / FM-200 / NOVEC)' : '4. Gas Flooding (NFPA 12 & 2001)'}</span>
           </button>
         </div>
       </div>
@@ -1327,6 +1350,18 @@ export default function EngineeringCalculators({ lang, selectedProject, onOpenAs
             </div>
           </div>
         </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* TAB 4: GAS FLOODING SYSTEMS (NFPA 12 & 2001) */}
+      {/* ========================================================= */}
+      {activeCalc === 'gas_flooding' && (
+        <GasFloodingCalculator 
+          lang={lang}
+          selectedProject={selectedProject}
+          onOpenAssistant={onOpenAssistant}
+          embedded={true}
+        />
       )}
 
     </div>

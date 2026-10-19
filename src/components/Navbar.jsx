@@ -21,7 +21,8 @@ import {
   Lock,
   ShieldCheck,
   Sun,
-  Moon
+  Moon,
+  Wind
 } from 'lucide-react';
 import { OFFICIAL_METADATA } from '../data/codeKnowledgeBase';
 import OfflineModeModal from './OfflineModeModal';
@@ -65,6 +66,7 @@ export default function Navbar({
     { id: 'dashboard', labelAr: 'لوحة القيادة', labelEn: 'Dashboard', icon: Building2 },
     { id: 'assessment', labelAr: 'تقييم المشاريع', labelEn: 'Project Assessment', icon: FileCheck2 },
     { id: 'calculators', labelAr: 'الحاسبات التفاعلية', labelEn: 'Code Calculators', icon: Calculator },
+    { id: 'gas_flooding', labelAr: 'إطفاء الغاز (CO2 / FM200)', labelEn: 'Gas Flooding (NFPA)', icon: Wind },
     { id: 'drawing', labelAr: 'فحص المخططات', labelEn: 'Drawing Review', icon: ClipboardList },
     { id: 'library', labelAr: 'تصفح الكود الكامل', labelEn: 'Full Code Browser', icon: BookOpen },
     { id: 'rejections', labelAr: 'أخطاء الحماية والتفسيرات', labelEn: 'Rejections & Interpretations', icon: AlertTriangle },
@@ -78,11 +80,13 @@ export default function Navbar({
     { id: 'dashboard', labelAr: 'الرئيسية', labelEn: 'Home', icon: Building2 },
     { id: 'assessment', labelAr: 'التقييم', labelEn: 'Assessment', icon: FileCheck2 },
     { id: 'calculators', labelAr: 'الحاسبات', labelEn: 'Calculators', icon: Calculator },
+    { id: 'gas_flooding', labelAr: 'إطفاء الغاز', labelEn: 'Gas Systems', icon: Wind },
     { id: 'drawing', labelAr: 'المخططات', labelEn: 'Drawings', icon: ClipboardList }
   ];
 
   // Secondary Tools for Mobile More Sheet
   const secondaryMobileTools = [
+    { id: 'gas_flooding', labelAr: 'إطفاء الغمر بالغاز (CO2 / FM200)', labelEn: 'Gas Flooding Systems (NFPA)', descAr: 'حسابات غرف الغمر الكلي طبقاً لـ NFPA 12 و 2001', icon: Wind, color: '#0284c7' },
     { id: 'library', labelAr: 'تصفح الكود الكامل', labelEn: 'Full Code Browser', descAr: 'الأجزاء الثلاثة والقرارات الوزارية ٢٠٢٦', icon: BookOpen, color: '#dc2626' },
     { id: 'rejections', labelAr: 'أسباب الرفض والتفسيرات', labelEn: 'Rejections & Interpretations', descAr: 'بنود التناقض ومخالفات الحماية المدنية', icon: AlertTriangle, color: '#f59e0b' },
     { id: 'issues', labelAr: 'دراسة الحالات الميدانية', labelEn: 'Field Cases & Issues', descAr: 'فحص المشاكل الحرجة للمشروع', icon: ShieldAlert, color: '#0284c7' },
